@@ -31,26 +31,27 @@ stream_t;
 stream_t s_create ();
 stream_t s_create_from_buf (uint8_t* buf, int len);
 
-void s_delete (stream_t* s);
+void s_free (stream_t* s);
 
 void s_seekg (stream_t* s, int relpos);
 void s_seekp (stream_t* s, int relpos);
 int s_tellg (stream_t* s);
 int s_tellp (stream_t* s);
 
-void s_reset (stream_t* s);
+void s_rewind (stream_t* s);
 
 int s_eof (stream_t* s);
 
-void s_read (stream_t* s, uint8_t* b, int b_len);
-void s_write (stream_t* s, uint8_t* b, int b_len);
+void s_read (stream_t* s, uint8_t* b, int len);
+void s_write (stream_t* s, uint8_t* b, int len);
 
-void s_read_string (stream_t* s, char* str, int str_len, int format);
-void s_write_string (stream_t* s, char* str, int str_len, int format);
+void s_read_string (stream_t* s, char* str, int len, int format);
+void s_write_string (stream_t* s, char* str, int len, int format);
 
-void s_read_until (stream_t* s, char delim, uint8_t* b, int b_len);
+void s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen);
 
 uint8_t* s_glance (stream_t* s);
+uint8_t s_peek (stream_t* s);
 
 uint8_t s_read_byte (stream_t* s);
 void s_write_byte (stream_t* s, uint8_t x);

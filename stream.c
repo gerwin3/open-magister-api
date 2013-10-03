@@ -1,26 +1,39 @@
 #include "stream.h"
 
+#include <limits.h>
+
 /*
  *	increase the g offset, check for eof, return the
- *	value (if != yet eof) with a adjusted index
+ *	value (if != yet eof) with an adjusted index
  */
 #define S_READ_INTX(Type) \
-	if (s__would_eof (s, sizeof(Type), S_MODE_G)) return 0; \
-	s->g += sizeof(Type); \
-	return *((Type*)&s->buf[s->g - sizeof(Type)]);
+	\
+	if ( (s->g + sizeof (Type) > s->len)) { \
+		return (Type) 0; \
+	} \
+	\
+	s->g += sizeof (Type); \
+	return * ( (Type*) &s->buf[s->g - sizeof (Type)]);
 
 /*
  *	increase the p offset, check for eof, return the
- *	value (if != yet eof) with a adjusted index
+ *	value (if != yet eof) with an adjusted index
  */
 #define S_WRITE_INTX(Type) \
-	if (s__would_eof (s, sizeof(Type), S_MODE_P)) return; \
-	*((Type*)&s->buf[s->p]) = x; \
-	s->p += sizeof(Type);
+	\
+	if ( (s->p + sizeof (Type) > p->len)) { \
+		s__resize (s, s->p + sizeof (Type)); \
+	} \
+	\
+	*( (Type*) &s->buf[s->p]) = x; \
+	s->p += sizeof (Type);
 
-int s__would_eof (stream_t* s, int w)
+void s__resize (stream_t* s, int minlen)
 {
-	return (s->g + w > s->len);
+	/* buffer will be reallocated, the new size is
+	 * twice the size of the minimum to prevent an
+	 * overload of reallocations */
+	s->buf = (uint8_t*) realloc (s->buf, (minlen * 2));
 }
 
 stream_t s_create ()
@@ -43,9 +56,9 @@ stream_t s_create_from_buf (uint8_t* buf, int len)
 	return s;
 }
 
-void s_delete (stream_t* s)
+void s_free (stream_t* s)
 {
-	
+	free (s->buf);
 }
 
 void s_seekg (stream_t* s, int relpos)
@@ -80,7 +93,7 @@ int s_tellp (stream_t* s)
 	return s->p;
 }
 
-void s_reset (stream_t* s)
+void s_rewind (stream_t* s)
 {
 	s->g = 0;
 	s->p = 0;
@@ -91,25 +104,33 @@ int s_eof (stream_t* s, int mode)
 	return (s->g > s->len);
 }
 
-void s_read (stream_t* s, uint8_t* b, int b_len)
+void s_read (stream_t* s, uint8_t* b, int len)
 {
-	int i = 0;
-	for (i = 0; i < b_len; i++) {
-		b[i] = s->buf[i + s->g];
+	if (b != NULL)
+	{
+		int i = 0;
+		for (i = 0; i < len; i++) {
+			b[i] = s->buf[i + s->g];
+		}
 	}
-	s->g += b_len;
+
+	s->g += len;
 }
 
-void s_write (stream_t* s, uint8_t* b, int b_len)
+void s_write (stream_t* s, uint8_t* b, int len)
 {
-	int i = 0;
-	for (i = 0; i < b_len; i++) {
-		s->buf[i + s->p] = b[i];
+	if (b != NULL)
+	{
+		int i = 0;
+		for (i = 0; i < len; i++) {
+			s->buf[i + s->p] = b[i];
+		}
 	}
-	s->p += b_len;
+
+	s->p += len;
 }
 
-void s_read_string(stream_t* s, char* str, int str_len, int format)
+void s_read_string(stream_t* s, char* str, int len, int format)
 {
 	switch (format)
 	{
@@ -117,7 +138,7 @@ void s_read_string(stream_t* s, char* str, int str_len, int format)
 	}
 }
 
-void s_write_string(stream_t* s, char* str, int str_len, int format)
+void s_write_string(stream_t* s, char* str, int len, int format)
 {
 	switch (format)
 	{
@@ -125,22 +146,29 @@ void s_write_string(stream_t* s, char* str, int str_len, int format)
 	}
 }
 
-void s_read_until (stream_t* s, char delim, uint8_t* b, int b_len)
+void s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen)
 {
 	int i = 0;
-	for (i = 0; i < b_len; i++)
+	for (i = 0; i < ( (maxlen > 0) ? maxlen : INT_MAX); i++)
 	{
-		if (*s_glance (s) == (uint8_t) delim) {
+		if (s_peek (s) == (uint8_t) delim) {
 			break;
 		}
 
-		b[i] = s_read_byte (s);
+		if (b != NULL) {
+			b[i] = s_read_byte (s);
+		}
 	}
 }
 
 uint8_t* s_glance(stream_t* s)
 {
 	return (s->buf + s->g);
+}
+
+uint8_t s_peek(stream_t* s)
+{
+	return (s->buf[s->g]);
 }
 
 uint8_t s_read_byte (stream_t* s)
