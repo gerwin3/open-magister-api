@@ -1,15 +1,6 @@
+#include "xml_quick.h"
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "stream.h"
-
-#define XML_MAX_TAG 64
-#define XML_MAX_CONTENT 1000000
-
-int xml_read_tag (stream_t* s, char* out)
+int xml__read_tag (stream_t* s, char* out)
 {
 	while (1)
 	{
