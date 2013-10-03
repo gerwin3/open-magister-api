@@ -1,3 +1,6 @@
+#ifndef LIST_H
+#define LIST_H
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -33,3 +36,5 @@ extern int ll_comp_size (llist_t* l);
 
 extern struct llist_node* ll_node_push (llist_t* l, llist_node* n, void* v);
 extern void* ll_node_pop (llist_t* l, llist_node* n);
+
+#endif
