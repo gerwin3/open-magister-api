@@ -22,7 +22,7 @@ uint8_t zip_crypt__special_byte (uint32_t keys[3])
 		( ( (uint16_t) (y * (y ^ 1)) >> 8) & 0xff);
 }
 
-int zip_encrypt (strm_t* sin, strm_t* sout, const char* password, uint32_t seed)
+int zip_encrypt (stream_t* sin, stream_t* sout, const char* password, uint32_t seed)
 {
 	uint32_t keys[3] = { 305419896,
 						 591751049,
@@ -64,7 +64,7 @@ int zip_encrypt (strm_t* sin, strm_t* sout, const char* password, uint32_t seed)
 	return 0;
 }
 
-int zip_decrypt (strm_t* sin, strm_t* sout, const char* password, uint32_t seed)
+int zip_decrypt (stream_t* sin, stream_t* sout, const char* password, uint32_t seed)
 {
 	int r = 0;
 

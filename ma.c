@@ -11,14 +11,14 @@
 
 int ma__receive_callback (void* buf, size_t size, size_t len, void* userp)
 {
-	s_write ( (strm_t*) userp, (uint8_t*) buf, size * len);
+	s_write ( (stream_t*) userp, (uint8_t*) buf, size * len);
 
 	return len;
 }
 
 int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 {
-	strm_t* shdr = (strm_t*) userp;
+	stream_t* shdr = (stream_t*) userp;
 
 	int i = 0;
 	for (i = 0; i < MAX_NHDRS; i++)
@@ -40,13 +40,13 @@ int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 	return len;
 }
 
-int ma__decode_request (strm_t* sin, strm_t* sout)
+int ma__decode_request (stream_t* sin, stream_t* sout)
 {
 	/* init */
 
 	int r = 0;
 	int size = 0;
-	strm_t s1, s2, s3, s4;
+	stream_t s1, s2, s3, s4;
 
 	z_stream zs;
 	struct zip_file_info zfile;
@@ -138,7 +138,7 @@ int ma__decode_request (strm_t* sin, strm_t* sout)
 	s_delete (&s4);
 }
 
-int ma__do_request (struct ma_medius* m, const char* service, strm_t* req)
+int ma__do_request (struct ma_medius* m, const char* service, stream_t* req)
 {
 	/* init */
 
@@ -147,10 +147,10 @@ int ma__do_request (struct ma_medius* m, const char* service, strm_t* req)
 	CURL* curl = curl_easy_init();
 	char url[MAX_PATH];
 
-	strm_t isresp =
+	stream_t isresp =
 		s_create_from_buf (m->buf, MAX_CONTENT);
 
-	strm_t osresp =
+	stream_t osresp =
 		s_create_from_buf (m->buf, MAX_CONTENT);
 
 	memset (m->buf, 0, MAX_CONTENT);
@@ -205,10 +205,10 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 	
 	char url[MAX_URL];
 
-	strm_t resp_body;
+	stream_t resp_body;
 
 	char hdr[MAX_URL];
-	strm_t resp_hdr =
+	stream_t resp_hdr =
 		s_create_from_buf ( (uint8_t*) hdr, MAX_URL);
 
 	memset (url, 0, MAX_URL);

@@ -3,7 +3,7 @@
 
 #include "stream.h"
 
-void hex2bin (strm_t* sin, strm_t* sout);
-void bin2hex (strm_t* sin, strm_t* sout);
+void hex2bin (stream_t* sin, stream_t* sout);
+void bin2hex (stream_t* sin, stream_t* sout);
 
 #endif

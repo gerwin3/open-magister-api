@@ -7,7 +7,7 @@
  *	Formats binary data as a hexdecimal stream, each byte is
  *	converted into two hexdecimal digits 0-f.
  */
-void bin2hex (strm_t* sin, strm_t* sout)
+void bin2hex (stream_t* sin, stream_t* sout)
 {
 	while (!s_eof (sin, S_MODE_G) && !s_eof (sout, S_MODE_P))
 	{
@@ -25,7 +25,7 @@ void bin2hex (strm_t* sin, strm_t* sout)
  *	Formats a hexdecimal stream into a normal binary stream,
  *	takes 2 digits (0-f) each and writes a byte to stream out.
  */
-void hex2bin (strm_t* sin, strm_t* sout)
+void hex2bin (stream_t* sin, stream_t* sout)
 {
 	while (!s_eof(sin, S_MODE_G) && !s_eof (sout, S_MODE_P))
 	{

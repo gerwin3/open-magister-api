@@ -97,7 +97,7 @@ int zip__hdr_type (const zip_hdr_p hdrp)
 	}
 }
 
-int zip__peek_hdr_type (strm_t* s)
+int zip__peek_hdr_type (stream_t* s)
 {
 	zip_hdr_p hdr_base =
 		(zip_hdr_p) s_glance (s);
@@ -105,7 +105,7 @@ int zip__peek_hdr_type (strm_t* s)
 	return zip__hdr_type (hdr_base);
 }
 
-int zip__read_header (strm_t* s, zip_hdr_p hdrp)
+int zip__read_header (stream_t* s, zip_hdr_p hdrp)
 {
 	int hdrtype =
 		zip__peek_hdr_type (s);
@@ -214,7 +214,7 @@ int zip__read_header (strm_t* s, zip_hdr_p hdrp)
  *	 - finfo: [out] file info
  *	 - fs: [out] output stream for file contents
  */
-int zip_file_find(strm_t* s, const char* fname, struct zip_file_info* finfo, strm_t* fs)
+int zip_file_find(stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs)
 {
 	int i = 0;
 

@@ -18,7 +18,7 @@
  *	DEFLATE			Untested		zlib (.h)
  */
 
-int easy_fread (char* path, strm_t* s)
+int easy_fread (char* path, stream_t* s)
 {
 	int r = -1;
 	FILE* f = fopen (path, "rb");
@@ -50,7 +50,7 @@ int easy_fread (char* path, strm_t* s)
 
 int main (int argc, char* argv[])
 {
-	strm_t s;
+	stream_t s;
 
 	easy_fread ("J:\\Programming\\staging_workspace\\magister\\comm\\all-req\\req1", &s);
 
