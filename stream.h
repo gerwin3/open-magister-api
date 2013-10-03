@@ -22,6 +22,7 @@ typedef struct
 {
 	uint8_t*	buf;	/* gets resized when more space is needed, size 
 						 * always equals .len */
+	int			len_avail;
 	int			len;
 	int			g;
 	int			p;
@@ -42,13 +43,13 @@ void s_rewind (stream_t* s);
 
 int s_eof (stream_t* s);
 
-void s_read (stream_t* s, uint8_t* b, int len);
+int s_read (stream_t* s, uint8_t* b, int len);
 void s_write (stream_t* s, uint8_t* b, int len);
 
 void s_read_string (stream_t* s, char* str, int len, int format);
 void s_write_string (stream_t* s, char* str, int len, int format);
 
-void s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen);
+int s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen);
 
 uint8_t* s_glance (stream_t* s);
 uint8_t s_peek (stream_t* s);
