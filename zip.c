@@ -111,7 +111,7 @@ int zip__read_header (stream_t* s, zip_hdr_p hdrp)
 		zip__peek_hdr_type (s);
 
 	if (hdrtype == ZIP_HDR_UNKOWN) {
-		return -1;
+		return ZIP_EMALFORMED;
 	}
 
 	switch (hdrtype)
@@ -203,38 +203,27 @@ int zip__read_header (stream_t* s, zip_hdr_p hdrp)
 		break;
 	}
 
-	return 0;
+	return ZIP_OK;
 }
 
-/*
- *	will read an parse the entire zip stream to look for one
- *	file and retrieve its headers and bytes.
- *	 - s: stream to read from
- *	 - fname: name of file to find
- *	 - finfo: [out] file info
- *	 - fs: [out] output stream for file contents
- */
-int zip_file_find(stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs)
+int zip__find_parse_cen_dir (stream_t* s, struct zip_hdr_cen_dir* hdr_cendir)
 {
 	int i = 0;
 
-	s_seekg (s, S_SEEK_BEGIN);
-	s_seekg (s, s->len - sizeof (struct zip_hdr_cen_dir_end) - 1);
+	s_seekg (s, S_SEEK_END);
+	s_seekg (s, - sizeof (struct zip_hdr_cen_dir_end) - 1);
 
 	/* we'll try finding the end of central directory
 	 * header by looping back from the end and looking
 	 * for it's signature */
-
 	for (i = s_tellg (s); i > 0; i--)
 	{
 		int hdrtype =
 			zip__peek_hdr_type (s);
 
-		/* found the cen_dir_end header?? */
 		if (hdrtype == ZIP_HDR_CEN_DIR_END || hdrtype == ZIP_HDR_CEN_DIR)
 		{
 			int eofs = 0;	
-			struct zip_hdr_cen_dir hdr_cendir;
 			
 			/* we've found the cen dir end first, it can guide
 			 * us to the cen dir directly. */
@@ -242,8 +231,8 @@ int zip_file_find(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 			{
 				struct zip_hdr_cen_dir_end hdr_cendirend;
 
-				if (zip__read_header (s, (zip_hdr_p) &hdr_cendirend) != 0) {
-					return -1;
+				if (zip__read_header (s, (zip_hdr_p) &hdr_cendirend) != ZIP_OK) {
+					return ZIP_EMALFORMED;
 				}
 
 				/* use the cen_dir_end header to find the actual
@@ -252,96 +241,11 @@ int zip_file_find(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 				s_seekg (s, +hdr_cendirend.cendir_off);
 			}
 
-			if (zip__read_header (s, (zip_hdr_p) &hdr_cendir) != 0) {
-				return -1;
+			if (zip__read_header (s, (zip_hdr_p) hdr_cendir) != ZIP_OK) {
+				return ZIP_EMALFORMED;
 			}
 
-			/* locate and read the first local file header */
-			s_seekg (s, S_SEEK_BEGIN);
-			s_seekg (s, +hdr_cendir.fhdr_off);
-
-			while (!eofs)
-			{
-				switch (zip__peek_hdr_type (s))
-				{
-					case ZIP_HDR_LOCAL_FILE:
-					{
-						struct zip_hdr_local_file hdr_file;
-
-						if (zip__read_header (s, (zip_hdr_p) &hdr_file) != 0) {
-							return -1;
-						}
-
-						if (memcmp (fname, hdr_file.fname, hdr_file.fname_len) == 0)
-						{
-							finfo->fname = fname;
-							finfo->comp_method = hdr_file.method;
-							finfo->crc32 = hdr_file.crc32;
-							finfo->mod_time = hdr_file.mod_time;
-							finfo->mod_date = hdr_file.mod_date;
-							finfo->comp_size = hdr_file.comp_size;
-							finfo->uncomp_size = hdr_file.uncomp_size;
-
-							/* some of the data we need might be hidden in the
-							 * data descriptor, if available */
-							if (hdr_file.flags & ZIP_FLAG_DATA_DESC)
-							{
-								int i = 0;
-								for (i = 0; !s_eof (s); i++, s_seekg (s, +1))
-								{
-									if (zip__peek_hdr_type (s) == ZIP_HDR_DATA_DESC)
-									{
-										struct zip_hdr_data_desc* hdr_ddesc_test =
-											(struct zip_hdr_data_desc*) s_glance (s);
-
-										if (hdr_ddesc_test->comp_size == i)
-										{
-											struct zip_hdr_data_desc hdr_ddesc;
-
-											/* this is definitely the header we're looking
-											 * for... parse */
-
-											if (zip__read_header (s, (zip_hdr_p) &hdr_ddesc) != 0) {
-												return -1;
-											}
-
-											finfo->comp_size = hdr_ddesc.comp_size;
-											finfo->uncomp_size = hdr_ddesc.uncomp_size;
-											finfo->crc32 = hdr_ddesc.crc32;
-
-											/* as if it never happened */
-											s_seekg (s, - (i + sizeof (struct zip_hdr_data_desc)));
-
-											break;
-										}
-									}
-								}
-							}
-
-							if (finfo->comp_size > 0)
-							{
-								s_write (fs, s_glance (s), finfo->comp_size);
-								s_seekg (s, finfo->comp_size);
-
-								return 0;
-							}
-							else
-							{
-								return -1; /* TODO: Error malformed */
-							}
-						}
-					}
-					break;
-					case ZIP_HDR_CEN_DIR:
-						/* when the central directory header is found there
-						 * will be no more local file headers to come. */
-						eofs = 1;
-					break;
-					default:
-						/* unexpected! */
-						eofs = 1;
-				}
-			}
+			return ZIP_OK;
 		}
 		else
 		{
@@ -351,6 +255,146 @@ int zip_file_find(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 		}
 	}
 
-	return -2; /* TODO error not found! */
+	return ZIP_ENOTFOUND;
+}
+
+int zip__parse_file (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
+{
+	struct zip_hdr_local_file hdr_file;
+
+	if (zip__read_header (s, (zip_hdr_p) &hdr_file) != ZIP_OK) {
+		return ZIP_EMALFORMED;
+	}
+
+	/* copy over essential members ... */
+	finfo->fname = hdr_file.fname;
+	finfo->fname_len = hdr_file.fname_len;
+	finfo->comp_method = hdr_file.method;
+	finfo->crc32 = hdr_file.crc32;
+	finfo->mod_time = hdr_file.mod_time;
+	finfo->mod_date = hdr_file.mod_date;
+	finfo->comp_size = hdr_file.comp_size;
+	finfo->uncomp_size = hdr_file.uncomp_size;
+
+	/* some of the data we need might be hidden in the
+	 * data descriptor, if available */
+	if (hdr_file.flags & ZIP_FLAG_DATA_DESC)
+	{
+		int i = 0;
+		for (i = 0; !s_eof (s); i++, s_seekg (s, +1))
+		{
+			/* found the data descriptor yet? */
+			if (zip__peek_hdr_type (s) == ZIP_HDR_DATA_DESC)
+			{
+				struct zip_hdr_data_desc* hdr_ddesc_test =
+					(struct zip_hdr_data_desc*) s_glance (s);
+
+				/* try to validate the header, to make it very
+				 * unlikely we ever run into a collision */
+				if (hdr_ddesc_test->comp_size == i)
+				{
+					struct zip_hdr_data_desc hdr_ddesc;
+
+					/* this is definitely the header we're looking
+					 * for... parse */
+					if (zip__read_header (s, (zip_hdr_p) &hdr_ddesc) != 0) {
+						return -1;
+					}
+
+					/* these are the ones we need! */
+					finfo->comp_size = hdr_ddesc.comp_size;
+					finfo->uncomp_size = hdr_ddesc.uncomp_size;
+					finfo->crc32 = hdr_ddesc.crc32;
+
+					/* as if it never happened */
+					s_seekg (s, - (i + sizeof (struct zip_hdr_data_desc)));
+
+					break;
+				}
+			}
+		}
+
+		if (finfo->comp_size > 0 && finfo->uncomp_size)
+		{
+			/* write the - still compressed - data to the
+			 * provided output stream */
+			s_write (fs, s_glance (s), finfo->comp_size);
+
+			/* we just took some data from the input stream
+			 * without shifting the get ptr; do it now */
+			s_seekg (s, finfo->comp_size);
+
+			return 0;
+		}
+		else {
+			return ZIP_EMALFORMED;
+		}
+	}
+}
+
+/*
+ *	will read an parse the entire zip stream to look for one
+ *	file to retrieve its headers and bytes.
+ *	 - s: stream to read from
+ *	 - fname: name of file to find
+ *	 - finfo: [out] file info
+ *	 - fs: [out] output stream for file contents
+ */
+int zip_file_find(stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs)
+{
+	int eofs = 0;
+	struct zip_hdr_cen_dir hdr_cendir;
+
+	/* first, find the central directory header, it
+	 * will guide us the rest of the parsing process */
+	if (zip__find_parse_cen_dir (s, &hdr_cendir) != ZIP_OK) {
+		return ZIP_EMALFORMED;
+	}
+
+	/* locate and read the first local file header */
+	s_seekg (s, S_SEEK_BEGIN);
+	s_seekg (s, +hdr_cendir.fhdr_off);
+
+	while (!eofs)
+	{
+		/* we can find out what header we're currently
+		 * onto, this only works because the parsing
+		 * functions always seek until directly after
+		 * their last block */
+		switch (zip__peek_hdr_type (s))
+		{
+			case ZIP_HDR_LOCAL_FILE:
+			{
+				/* it seems to be a file, parse it! */
+				if (zip__parse_file (s, finfo, fs) == ZIP_OK)
+				{
+					if (memcmp (fname, finfo->fname, finfo->fname_len) == 0)
+					{
+						/* yes, we found the file! */
+						return ZIP_OK;
+					}
+					else {
+						/* reset memory to prevent confusion ;) */
+						memset (finfo, 0, sizeof (zip_file_info));
+					}
+				}
+				else {
+					return ZIP_EMALFORMED;
+				}
+			}
+			break;
+			case ZIP_HDR_CEN_DIR:
+			case ZIP_HDR_CEN_DIR_END:
+				/* when the cen (end) dir header is found, there
+				 * will be no more local file headers to come. */
+				eofs = 1;
+			break;
+			default:
+				/* unexpected! */
+				eofs = 1;
+		}
+	}
+
+	return ZIP_ENOTFOUND;
 }
 

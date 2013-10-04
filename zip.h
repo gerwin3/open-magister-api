@@ -6,6 +6,11 @@
 
 #include "stream.h"
 
+#define ZIP_OK					0
+#define ZIP_EINVAL				1
+#define ZIP_EMALFORMED			2
+#define ZIP_ENOTFOUND			3
+
 #define ZIP_MAGIC				0x00004b50
 
 #define ZIP_HDR_UNKOWN			0
@@ -44,6 +49,7 @@ struct zip_file_info
 {
 	const char* fname;	/* backed by the input stream, freeing the stream
 						 * will invalidate this string */
+	int fname_len;
 	int comp_method;
 	int comp_size;
 	int uncomp_size;
@@ -52,6 +58,6 @@ struct zip_file_info
 	uint32_t crc32;
 };
 
-int zip_file_find (stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs);
+extern int zip_file_find (stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs);
 
 #endif
