@@ -25,14 +25,14 @@ int easy_fread (char* path, stream_t* s)
 
 	if (f > 0)
 	{
+		uint8_t* fcontents = NULL;
 		int fsz = 0;
 
 		fseek (f, 0, SEEK_END);
 		fsz = ftell (f);
 		rewind (f);
 
-		uint8_t* fcontents = (uint8_t*)
-			malloc (fsz);
+		fcontents = (uint8_t*) malloc (fsz);
 
 		if (fread ( (char*) fcontents, 1, fsz, f) == fsz) {
 			r = 0;
