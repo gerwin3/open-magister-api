@@ -7,6 +7,7 @@
 #include "stream.h"
 
 #define MAX_URL			512
+#define MAX_HDR			512
 #define MAX_NHDRS		64
 #define MAX_CONTENT		1000000 /* 1MB of storage, use carefully */
 
@@ -36,9 +37,6 @@ struct ma_medius
 {
 	char url_base[MAX_URL];
 	char url_v[MAX_URL];
-
-	uint8_t* buf;			/* used for receiving data, len: MAX_CONTENT */
-	int len;
 };
 
 int ma_medius_init (struct ma_medius* m, const char* name);

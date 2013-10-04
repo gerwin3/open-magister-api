@@ -48,6 +48,7 @@ stream_t s_create ()
 {
 	stream_t s;
 	s.buf = (uint8_t*) malloc (S_INIT_LEN);
+	s.buf_own = 1;
 	s.len_avail = S_INIT_LEN;
 	s.len = 0;
 	s.g = s.p = 0;
@@ -59,6 +60,7 @@ stream_t s_create_from_buf (uint8_t* buf, int len)
 {
 	stream_t s;
 	s.buf = buf;
+	s.buf_own = 0;
 	s.len_avail = len;
 	s.len = len;
 	s.g = s.p = 0;
@@ -68,7 +70,9 @@ stream_t s_create_from_buf (uint8_t* buf, int len)
 
 void s_free (stream_t* s)
 {
-	free (s->buf);
+	if (s->buf_own) {
+		free (s->buf);
+	}
 }
 
 void s_seekg (stream_t* s, int relpos)
@@ -140,6 +144,11 @@ void s_write (stream_t* s, uint8_t* b, int len)
 	/* make sure we can fit this in */
 	if (s->p + len > s->len_avail) {
 		s__realloc_to_fit (s, s->p + len);
+	}
+
+	/* adjust len if necessary */
+	if (s->p + len > s->len) {
+		s->len = s->p + len;
 	}
 
 	/* copy over the data if we have

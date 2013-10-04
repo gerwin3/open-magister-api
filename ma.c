@@ -1,250 +1,292 @@
 #include "ma.h"
 
 #include <curl/curl.h>
-/*#include <libxml/parser.h>
-#include <libxml/tree.h>		TODO: Reinstate, we're not ready yet. */
 #include <zlib.h>
 
+#include "list.h"
 #include "hex.h"
 #include "zip.h"
 #include "zip_crypt.h"
 
+/*
+ *	callback - utilized by curl, used by us - to read
+ *	response data
+ *	 - buf: response data
+ *	 - size: byte size
+ *	 - len: num byte
+ *	 - userp: pointer provided by us; will be converted
+ *			  to stream_t* to write output data
+ */
 int ma__receive_callback (void* buf, size_t size, size_t len, void* userp)
 {
-	s_write ( (stream_t*) userp, (uint8_t*) buf, size * len);
+	s_write ( (stream_t*) userp,
+			  (uint8_t*) buf,
+			  (size * len));
 
 	return len;
 }
 
+/*
+ *	callback - utilized by curl, used by us - to read
+ *	response headers
+ *	 - buf: header line bytes
+ *	 - size: byte size
+ *	 - len: num byte
+ *	 - userp: pointer provided by us; will be converted
+ *			  to llist_*, containing header-var's that
+ *			  are to be replaced by their values
+ */
 int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 {
-	stream_t* shdr = (stream_t*) userp;
+	llist_t* lhdrs = (llist_t*) userp;
+	struct llist_node* nhdr = NULL;
 
-	int i = 0;
-	for (i = 0; i < MAX_NHDRS; i++)
+	/* we're trying to find out if this is one of the
+	 * headers we're looking for */
+	for (nhdr = lhdrs->head;
+		 nhdr->next != NULL;
+		 nhdr = nhdr->next)
 	{
-		char* sstr =
-			(char*) s_glance (shdr);
+		char* shdr = (char*) nhdr->v;
 
-		/* write the header to the stream if it is actually the
-		 * <X from instrm> header */
-		if (memcmp (sstr, buf, strlen (sstr)) == 0)
+		if (memcmp (shdr, buf, strlen (shdr)))
 		{
-			s_seekp (shdr, S_SEEK_BEGIN);
-			s_write (shdr, (uint8_t*) buf, (len * size));
-
-			break;
+			/* we've found a header we need, reset the
+			 * input buffer and copy over this line to
+			 * it; now it's a output buf */
+			memset (shdr, 0, MAX_HDR);
+			memcpy (shdr, buf, max ( (size * len), MAX_HDR));
 		}
 	}
 
 	return len;
 }
 
+/*
+ *	decodes data from the magister servers
+ *	 - sin: input data
+ *	 - sout: output data
+ */
 int ma__decode_request (stream_t* sin, stream_t* sout)
 {
 	/* init */
 
 	int r = 0;
-	int size = 0;
-	stream_t s1, s2, s3, s4;
+	stream_t s1, s2, s3;
 
-	z_stream zs;
 	struct zip_file_info zfile;
+
+	s1 = s_create ();
+	s2 = s_create ();
+	s3 = s_create ();
 
 	/* decode */
 
-	/*
-	 *	L1: SOAP layer
-	 *	 -> simply skip the header
-	 */
-	s_seekg (sin, + strlen (MA_SOAP_PREFIX));
-
-	/*
-	 *	L2: hexdec layer
-	 *	 -> convert to binary with hex2bin ()
-	 */
-	size = (sin->len - (strlen (MA_SOAP_PREFIX) + strlen (MA_SOAP_POSTFIX))) / 2;
-	s1 = s_create (size);
-	hex2bin (sin, &s1);
-
-	/*
-	 *	L3: Zip container
-	 *	 -> extract the 'content' file from the zip
-	 */
-	s2 = s_create (size);
-	zip_file_read (&s1, "content", &zfile, &s2);
-
-	/*
-	 *	L4: PK Zip encryption
-	 *	 -> decrypt with MA_ZIP_PASSWORD
-	 */
-	s3 = s_create (zfile.uncomp_size);
-	if (zip_decrypt (&s2, &s3, MA_ZIP_PASSWORD, zfile.mod_time) != 0)
 	{
-		/* Log Warning */
+		/*
+		*	L1: SOAP layer
+		*	 -> simply skip the header
+		*/
+		s_seekg (sin, + strlen (MA_SOAP_PREFIX));
 	}
 
-	/*
-	 *	L5: DEFLATE compressed bytes
-	 *	 -> uncompress them
-	 */
-	*sout = s_create (zfile.uncomp_size);
-
-	zs.zalloc = Z_NULL;
-	zs.zfree = Z_NULL;
-	zs.opaque = Z_NULL;
-	zs.avail_in = (uInt) s3.len;
-	zs.next_in = (Bytef*) s3.buf;
-	zs.avail_out = (uInt) sout->len;
-	zs.next_out = (Bytef*) sout->buf;
-
-	inflateInit2 (&zs, -13);
-	inflate (&zs, Z_NO_FLUSH);
-	inflateEnd (&zs);
 	{
-		char* debugtodoremovex = (char*) sout->buf;
-		int i = 0;
+		/*
+		*	L2: hexdec layer
+		*	 -> convert to binary with hex2bin ()
+		*/
+		hex2bin (sin, &s1);
 	}
-	
 
-	/*
-	 *	L6: XML
-	 *	 -> parse the xml data
-	 */
-	{/*
-		xmlDocPtr doc =
-			xmlParseMemory ( (const char*) s_glance (&s4), s4.len);
+	{
+		/*
+		*	L3: Zip container
+		*	 -> extract the 'content' file from the zip
+		*/
+		zip_file_read (&s1, "content", &zfile, &s2);
+	}
 
-		xmlNodePtr cur
-			= xmlDocGetRootElement (doc);
-
-		cur = cur->xmlChildrenNode;
-		while (cur != NULL)
+	{
+		/*
+		*	L4: PK Zip encryption
+		*	 -> decrypt with MA_ZIP_PASSWORD
+		*/
+		if (zip_decrypt (&s2, &s3, MA_ZIP_PASSWORD, zfile.mod_time) != 0)
 		{
-			if ( (!xmlStrcmp (cur->name, (const xmlChar *) "XXX"))){
-				
-			}
-			cur = cur->next;
-		}*/
+			/* Log Warning */
+		}
 	}
 
-	s_seekg (sin, + strlen (MA_SOAP_POSTFIX));
+	{
+		/*
+		*	L5: DEFLATE compressed bytes
+		*	 -> uncompress them
+		*/
+		uint8_t* z_buf_out = (uint8_t*)
+			malloc (zfile.uncomp_size);
+
+		z_stream zs;
+		zs.zalloc = Z_NULL;
+		zs.zfree = Z_NULL;
+		zs.opaque = Z_NULL;
+		zs.avail_in = (uInt) s3.len;	/* we've gotta hack these out of there ... */
+		zs.next_in = (Bytef*) s3.buf;	/* ... to make this less painful */
+		zs.avail_out = (uInt) zfile.uncomp_size;
+		zs.next_out = (Bytef*) z_buf_out;
+
+		inflateInit2 (&zs, -13);
+		inflate (&zs, Z_NO_FLUSH);
+		inflateEnd (&zs);
+		{
+			/* FIX TEST TODO!!! */
+			char* debugtodoremovex = (char*) z_buf_out;
+
+			s_write (sout, z_buf_out, zfile.uncomp_size);
+		}
+	}
+
+	{
+		/*
+		*	L1: SOAP layer
+		*	 -> also skip the footer, for clarity
+		*/
+		s_seekg (sin, + strlen (MA_SOAP_POSTFIX));
+	}
 
 	/* deinit */
 
 	s_free (&s1);
 	s_free (&s2);
 	s_free (&s3);
-	s_free (&s4);
 }
 
-int ma__do_request (struct ma_medius* m, const char* service, stream_t* req)
+/*
+ *	carries out request to the schoolmaster servers and
+ *	acquires and returns decoded XML data
+ *	 - m: session pointer, acquired by ma_medius_init
+ *	 - service: type of service to send the request to
+ *	 - req: request data, will be encoded
+ *	 - resp: response data, will be decoded
+ */
+int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, stream_t* resp)
 {
 	/* init */
-
 	int ret = 0;
 
 	CURL* curl = curl_easy_init();
 	char url[MAX_PATH];
 
-	stream_t isresp =
-		s_create_from_buf (m->buf, MAX_CONTENT);
+	stream_t rawresp = s_create ();
 
-	stream_t osresp =
-		s_create_from_buf (m->buf, MAX_CONTENT);
-
-	memset (m->buf, 0, MAX_CONTENT);
 	memset (url, 0, MAX_PATH);
 
-	/* prepare for request */
-
+	/* format url correctly, including service and
+	 * correct version */
 	sprintf (url, "https://%s/%s/WCFServices/%s",
 			 m->url_base,
 			 m->url_v,
 			 service);
 
+	/* setup curl to execute our request correctly,
+	 * using SSL and HTTP POST data */
 	curl_easy_setopt (curl, CURLOPT_URL, url);
 	curl_easy_setopt (curl, CURLOPT_URL, url);
 	curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0);
 	curl_easy_setopt (curl, CURLOPT_SSL_VERIFYHOST, 0);
 
 	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, ma__receive_callback);
-	curl_easy_setopt (curl, CURLOPT_WRITEDATA, &isresp);
+	curl_easy_setopt (curl, CURLOPT_WRITEDATA, &rawresp);
 
-	/* request ! */
+	/*
+	 *	TODO: Request data, in!
+	 *		  Needs to be
+	 *			- XML encoded (oh... BTW... UTF-16)
+	 *			- ZIPPED
+	 *			- ZipCrypt encrypted
+	 *			- in hexdecimal bytes
+	 *			- wrapped by SOAP
+	 */
 
+	/* send request! */
 	if (curl_easy_perform (curl) == CURLE_OK)
 	{
-		if (ma__decode_request (&isresp, &osresp) == MA_OK)
-		{
-			m->len = s_tellp (&osresp);
-			ret = MA_OK;
-		}
-		else {
-			ret = MA_EMALFORMED;
-		}
+		/* decode the acquired data to readable format
+		 * and then write it */
+		ret = ( (ma__decode_request (&rawresp, resp) == MA_OK)
+				? MA_OK : MA_EMALFORMED);
 	}
 	else {
 		ret = MA_ECONNECTION;
 	}
 
-	s_free (&isresp);
-	s_free (&osresp);
+	/* cleanup */
+	s_free (&rawresp);
 
 	return ret;
 }
 
+/*
+ *	makes first contact with the medius server;
+ *	verifies connection and acquires init data
+ *	 - m: session ptr
+ *	 - name: name of medius server (e.g. example.swp.nl)
+ */
 int ma_medius_init (struct ma_medius* m, const char* name)
 {
 	/* init */
+	int ret = 0;
+	int i = 0;
 
 	CURL* curl = curl_easy_init();
-	int ret = 0;
-
-	int i = 0;
-	
 	char url[MAX_URL];
+	char hdr_httploc[MAX_HDR];
 
-	stream_t resp_body;
-
-	char hdr[MAX_URL];
-	stream_t resp_hdr =
-		s_create_from_buf ( (uint8_t*) hdr, MAX_URL);
+	llist_t lhdrs = ll_create ();
 
 	memset (url, 0, MAX_URL);
+	memset (hdr_httploc, 0, MAX_HDR);
 
-	m->buf = (uint8_t*) malloc (MAX_CONTENT);
-	resp_body =
-		s_create_from_buf (m->buf, MAX_CONTENT);
-
-	memset (hdr, 0, MAX_URL);
-
-	/* prepare for request */
-
+	/* format url correctly */
 	sprintf (url, "https://%s/", name);
-	strcat (hdr, "Location");
 
+	/* prepare a list with the Location header-var
+	 * added to pass on to ma__header_callback */
+	strcpy (hdr_httploc, "Location");
+	ll_push (&lhdrs, hdr_httploc);
+
+	/* setup curl to execute our request correctly,
+	 * using SSL and HTTP GET */
 	curl_easy_setopt (curl, CURLOPT_URL, url);
 	curl_easy_setopt (curl, CURLOPT_HTTPGET, 1);
 	curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0);
 	curl_easy_setopt (curl, CURLOPT_SSL_VERIFYHOST, 0);
 
 	curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, ma__header_callback);
-	curl_easy_setopt (curl, CURLOPT_WRITEHEADER, &resp_hdr);
+	curl_easy_setopt (curl, CURLOPT_WRITEHEADER, &lhdrs);
 
-	/* request ! */
-
+	/* execute request! */
 	if (curl_easy_perform (curl) == CURLE_OK)
 	{
-		if (s_tellp (&resp_hdr) > 0)
+		/* if the Location header has been found, we
+		 * consider this request a success */
+		if (strlen (hdr_httploc) > strlen ("Location"))
 		{
+			/* make this into a stream so we can read
+			 * it more easily later */
+			stream_t shdr_httploc =
+				s_create_from_buf ( (uint8_t*) hdr_httploc, strlen (hdr_httploc));
+
 			memset (m->url_base, 0, MAX_URL);
 			memset (m->url_v, 0, MAX_URL);
 
+			/* copy over base url */
 			strcpy (m->url_base, name);
 
-			s_seekg (&resp_hdr, + (strlen ("Location: /")));
-			s_read_until (&resp_hdr, '/', (uint8_t*) m->url_v, MAX_URL);
+			/* read the version string */
+			s_seekg (&shdr_httploc, + (strlen ("Location: /")));
+			s_read_until (&shdr_httploc, '/', (uint8_t*) m->url_v, MAX_URL);
+
+			s_free (&shdr_httploc);
 		}
 		else {
 			ret = MA_EMALFORMED;
@@ -254,13 +296,13 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 		ret = MA_ECONNECTION;
 	}
 
-	s_free (&resp_body);
-	s_free (&resp_hdr);
+	/* cleanup */
+	ll_free (&lhdrs);
 
 	return ret;
 }
 
 void ma_medius_delete (struct ma_medius* m)
 {
-	free (m->buf);
+	/* TODO: Remove, maybe, someday */
 }

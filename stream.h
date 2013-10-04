@@ -22,6 +22,7 @@ typedef struct
 {
 	uint8_t*	buf;	/* gets resized when more space is needed, size 
 						 * always equals .len */
+	int			buf_own;
 	int			len_avail;
 	int			len;
 	int			g;

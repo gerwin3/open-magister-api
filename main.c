@@ -31,14 +31,18 @@ int easy_fread (char* path, stream_t* s)
 		fsz = ftell (f);
 		rewind (f);
 
-		*s = s_create (fsz);
+		uint8_t* fcontents = (uint8_t*)
+			malloc (fsz);
 
-		if (fread (s->buf, 1, fsz, f) == fsz) {
+		if (fread ( (char*) fcontents, 1, fsz, f) == fsz) {
 			r = 0;
 		} else {
 			r = -1;
 		}
 
+		s_write (s, fcontents, fsz);
+
+		free (fcontents);
 		fclose (f);
 	}
 	else {
