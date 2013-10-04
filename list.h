@@ -15,11 +15,12 @@
  *		struct llist_node* n;
  *		for (n = l->head; n->next != NULL; n = n->next) { ... }
  */
-typedef struct llist_t
+typedef struct
 {
 	struct llist_node* head;
 	struct llist_node* tail;
-};
+}
+llist_t;
 
 struct llist_node
 {
@@ -34,7 +35,7 @@ extern void ll_free (llist_t* l);
 extern struct llist_node* ll_push (llist_t* l, void* v);
 extern int ll_comp_size (llist_t* l);
 
-extern struct llist_node* ll_node_push (llist_t* l, llist_node* n, void* v);
-extern void* ll_node_pop (llist_t* l, llist_node* n);
+extern struct llist_node* ll_node_push (llist_t* l, struct llist_node* n, void* v);
+extern void* ll_node_pop (llist_t* l, struct llist_node* n);
 
 #endif

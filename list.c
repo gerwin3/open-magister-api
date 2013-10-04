@@ -54,7 +54,7 @@ int ll_comp_size (llist_t* l)
 	return ret;
 }
 
-struct llist_node* ll_node_push (llist_t* l, llist_node* n, void* v)
+struct llist_node* ll_node_push (llist_t* l, struct llist_node* n, void* v)
 {
 	/* create new node; fill in next/previous */
 	struct llist_node* pushn =
@@ -80,7 +80,7 @@ struct llist_node* ll_node_push (llist_t* l, llist_node* n, void* v)
 	return pushn;
 }
 
-void* ll_node_pop (llist_t* l, llist_node* n)
+void* ll_node_pop (llist_t* l, struct llist_node* n)
 {
 	void* v = n->v;
 

@@ -9,7 +9,7 @@
  */
 void bin2hex (stream_t* sin, stream_t* sout)
 {
-	while (!s_eof (sin, S_MODE_G) && !s_eof (sout, S_MODE_P))
+	while (!s_eof (sin))
 	{
 		char hex[3];
 		char byte = (char) s_read_byte(sin);
@@ -27,9 +27,11 @@ void bin2hex (stream_t* sin, stream_t* sout)
  */
 void hex2bin (stream_t* sin, stream_t* sout)
 {
-	while (!s_eof(sin, S_MODE_G) && !s_eof (sout, S_MODE_P))
+	while (!s_eof(sin))
 	{
-		char hex[] = { (char) s_read_byte(sin), (char) s_read_byte(sin), '\0' };
+		char hex[] = { (char) s_read_byte(sin),
+					   (char) s_read_byte(sin),
+					   '\0' };
 		int byte;
 		
 		sscanf (hex, "%2hhX", &byte);

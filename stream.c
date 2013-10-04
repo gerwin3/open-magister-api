@@ -36,8 +36,8 @@
 void s__realloc_to_fit (stream_t* s, int minlen)
 {
 	/* buffer will be reallocated, the new size is
-	 * twice the size of the minimum to prevent an
-	 * overload of reallocations */
+	 * twice the size of the minimum to make sure
+	 * we don't keep reallocating */
 	s->buf = (uint8_t*)
 		realloc (s->buf, (minlen * 2));
 
@@ -109,7 +109,7 @@ void s_rewind (stream_t* s)
 	s->p = 0;
 }
 
-int s_eof (stream_t* s, int mode)
+int s_eof (stream_t* s)
 {
 	return (s->g > s->len);
 }
@@ -135,6 +135,8 @@ int s_read (stream_t* s, uint8_t* b, int len)
 
 void s_write (stream_t* s, uint8_t* b, int len)
 {
+	int i = 0;
+
 	/* make sure we can fit this in */
 	if (s->p + len > s->len_avail) {
 		s__realloc_to_fit (s, s->p + len);
@@ -142,7 +144,6 @@ void s_write (stream_t* s, uint8_t* b, int len)
 
 	/* copy over the data if we have
 	 * a valid output buffer */
-	int i = 0;
 	for (i = 0; i < len; i++)
 	{
 		if (b != NULL) {

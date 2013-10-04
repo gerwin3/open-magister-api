@@ -132,10 +132,10 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 
 	/* deinit */
 
-	s_delete (&s1);
-	s_delete (&s2);
-	s_delete (&s3);
-	s_delete (&s4);
+	s_free (&s1);
+	s_free (&s2);
+	s_free (&s3);
+	s_free (&s4);
 }
 
 int ma__do_request (struct ma_medius* m, const char* service, stream_t* req)
@@ -188,8 +188,8 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req)
 		ret = MA_ECONNECTION;
 	}
 
-	s_delete (&isresp);
-	s_delete (&osresp);
+	s_free (&isresp);
+	s_free (&osresp);
 
 	return ret;
 }
@@ -254,8 +254,8 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 		ret = MA_ECONNECTION;
 	}
 
-	s_delete (&resp_body);
-	s_delete (&resp_hdr);
+	s_free (&resp_body);
+	s_free (&resp_hdr);
 
 	return ret;
 }

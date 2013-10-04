@@ -287,7 +287,7 @@ int zip_file_find(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 							if (hdr_file.flags & ZIP_FLAG_DATA_DESC)
 							{
 								int i = 0;
-								for (i = 0; !s_eof (s, S_MODE_G); i++, s_seekg (s, +1))
+								for (i = 0; !s_eof (s); i++, s_seekg (s, +1))
 								{
 									if (zip__peek_hdr_type (s) == ZIP_HDR_DATA_DESC)
 									{

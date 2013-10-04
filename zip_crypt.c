@@ -50,7 +50,7 @@ int zip_encrypt (stream_t* sin, stream_t* sout, const char* password, uint32_t s
 		zip_crypt__develop_keys (keys, password[i]);
 	}
 
-	for (i = 0; !s_eof (sin, S_MODE_G); i++)
+	for (i = 0; !s_eof (sin); i++)
 	{
 		uint8_t x = s_read_byte (sin);
 		uint8_t y = zip_crypt__special_byte (keys);
@@ -80,7 +80,7 @@ int zip_decrypt (stream_t* sin, stream_t* sout, const char* password, uint32_t s
 		zip_crypt__develop_keys (keys, password[i]);
 	}
 
-	for (i = 0; !s_eof (sin, S_MODE_G); i++)
+	for (i = 0; !s_eof (sin); i++)
 	{
 		uint8_t x =
 			s_read_byte (sin) ^ zip_crypt__special_byte (keys);
