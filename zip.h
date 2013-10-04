@@ -47,9 +47,10 @@
 
 struct zip_file_info
 {
-	const char* fname;	/* backed by the input stream, freeing the stream
-						 * will invalidate this string */
+	char* fname;	/* backed by the input stream, freeing the stream
+					 * will invalidate this string */
 	int fname_len;
+	int flags;
 	int comp_method;
 	int comp_size;
 	int uncomp_size;
@@ -58,6 +59,7 @@ struct zip_file_info
 	uint32_t crc32;
 };
 
-extern int zip_file_find (stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs);
+extern int zip_file_read (stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs);
+extern int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs);
 
 #endif
