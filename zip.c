@@ -315,7 +315,7 @@ int zip__find_parse_cen_dir (stream_t* s, struct zip_hdr_cen_dir* hdr_cendir)
 	int i = 0;
 
 	s_seekg (s, S_SEEK_END);
-	s_seekg (s, - sizeof (struct zip_hdr_cen_dir_end) - 1);
+	s_seekg (s, - ((int) sizeof (struct zip_hdr_cen_dir_end) - 1));
 
 	/* we'll try finding the end of central directory
 	 * header by looping back from the end and looking
@@ -412,7 +412,7 @@ int zip__parse_file (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 					finfo->crc32 = hdr_ddesc.crc32;
 
 					/* as if it never happened */
-					s_seekg (s, - (i + sizeof (struct zip_hdr_data_desc)));
+					s_seekg (s, - (int) (i + sizeof (struct zip_hdr_data_desc)));
 
 					break;
 				}
@@ -480,7 +480,7 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 					}
 					else {
 						/* reset memory to prevent confusion ;) */
-						memset (finfo, 0, sizeof (zip_file_info));
+						memset (finfo, 0, sizeof (struct zip_file_info));
 					}
 				}
 				else {
@@ -560,29 +560,31 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 		}
 	}
 
-	/* construct and write the central directory */
-	struct zip_hdr_cen_dir hdr_cendir = {
-		zip__hdr_sign (ZIP_HDR_CEN_DIR),
-		0,
-		0,
-		finfo->flags,
-		finfo->comp_method,
-		finfo->mod_time,
-		finfo->mod_date,
-		finfo->crc32,
-		finfo->comp_size,
-		finfo->uncomp_size,
-		finfo->fname_len,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0
-	};
+	{
+		/* construct and write the central directory */
+		struct zip_hdr_cen_dir hdr_cendir = {
+			zip__hdr_sign (ZIP_HDR_CEN_DIR),
+			0,
+			0,
+			finfo->flags,
+			finfo->comp_method,
+			finfo->mod_time,
+			finfo->mod_date,
+			finfo->crc32,
+			finfo->comp_size,
+			finfo->uncomp_size,
+			finfo->fname_len,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0
+		};
 
-	if (zip__write_hdr (s, (zip_hdr_p) &hdr_cendir) != ZIP_OK) {
-		return ZIP_EINVAL;
+		if (zip__write_hdr (s, (zip_hdr_p) &hdr_cendir) != ZIP_OK) {
+			return ZIP_EINVAL;
+		}
 	}
 
 	/* wrote:

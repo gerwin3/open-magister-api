@@ -2,9 +2,9 @@
 
 int xml_quick_parse (stream_t* s, llist_t* out)
 {
+	/*
 	s_read_until (s, '>', (uint8_t*) tag, XML_MAX_TAG);
 
-	/*
 	while (1)
 	{
 		int i = 0;

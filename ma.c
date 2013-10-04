@@ -72,7 +72,7 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 	 *	 -> extract the 'content' file from the zip
 	 */
 	s2 = s_create (size);
-	zip_file_find (&s1, "content", &zfile, &s2);
+	zip_file_read (&s1, "content", &zfile, &s2);
 
 	/*
 	 *	L4: PK Zip encryption
