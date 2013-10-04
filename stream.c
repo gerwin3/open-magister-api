@@ -115,7 +115,7 @@ void s_rewind (stream_t* s)
 
 int s_eof (stream_t* s)
 {
-	return (s->g > s->len);
+	return (s->g >= s->len);
 }
 
 int s_read (stream_t* s, uint8_t* b, int len)

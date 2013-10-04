@@ -16,8 +16,8 @@
 #define ZIP_HDR_UNKOWN			0
 #define ZIP_HDR_LOCAL_FILE		1
 #define ZIP_HDR_DATA_DESC		2
-#define ZIP_HDR_CEN_DIR			3
-#define ZIP_HDR_CEN_DIR_END		4
+#define ZIP_HDR_CENDIR_FILE		3
+#define ZIP_HDR_CENDIR_END		4
 
 #define ZIP_FLAG_ENCRYPTED		0x0001
 #define ZIP_FLAG_OPT_1			0x0002

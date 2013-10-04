@@ -35,7 +35,7 @@ struct zip_hdr_data_desc
 	uint32_t uncomp_size;
 };
 
-struct zip_hdr_cen_dir
+struct zip_hdr_cendir_file
 {
 	uint32_t sign;
 	uint16_t madev;
@@ -61,7 +61,7 @@ struct zip_hdr_cen_dir
 						 * the stream and thus managed by the user */
 };
 
-struct zip_hdr_cen_dir_end
+struct zip_hdr_cendir_end
 {
 	uint32_t sign;
 	uint16_t ndisk;

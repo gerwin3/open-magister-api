@@ -54,7 +54,7 @@ int easy_fread (char* path, stream_t* s)
 
 int main (int argc, char* argv[])
 {
-	stream_t s;
+	stream_t s = s_create ();
 
 	easy_fread ("J:\\Programming\\staging_workspace\\magister\\comm\\all-req\\req1", &s);
 
