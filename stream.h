@@ -46,6 +46,7 @@ int s_fread (stream_t* s, char* str, int len, int format);
 int s_fwrite (stream_t* s, char* str, int len, int format);
 
 int s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen);
+int s_fread_until (stream_t* s, char delim, char* str, int maxlen, int format);
 
 uint8_t* s_glance (stream_t* s);
 uint8_t s_peek (stream_t* s);

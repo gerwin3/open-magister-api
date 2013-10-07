@@ -247,7 +247,7 @@ int s_fread(stream_t* s, char* str, int len, int format)
 	}
 }
 
-void s_fwrite(stream_t* s, char* str, int len, int format)
+int s_fwrite(stream_t* s, char* str, int len, int format)
 {
 	switch (format)
 	{
@@ -268,14 +268,115 @@ int s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen)
 
 		if (b != NULL) {
 			/* only write to valid buf */
-			b[i] = s_read_byte (s);
+			b[i] = s->buf[i + s->g];
 		}
 	}
 
 	/* add up and return n of bytes actually
 	 * read ... */
 	s->g += i;
+
 	return i;
+}
+
+int s_fread_until (stream_t* s, char delim, char* str, int maxlen, int format)
+{
+	switch (format)
+	{
+		case S_STR_UTF8:
+		{
+			int i = 0, j = 0;
+			for (i = 0, j = 0; ((j < (maxlen > 0) ? maxlen : INT_MAX) && !s_eof (s)); i++)
+			{
+				/* make sure we stop reading before
+				 * reaching the delim */
+				if (s_peek (s) == (uint8_t) delim) {
+					break;
+				}
+
+				/* only write if we have a valid
+				 * output buffer */
+				if (str != NULL) {
+					/* only keep ascii-valid bytes */
+					if (s->buf[i + s->g] <= 128)
+					{
+						str[i] = (char) s->buf[i + s->g];
+						j++;
+					}
+				}
+			}
+
+			/* i is the number of bytes actually (!)
+			 * read; can be less */
+			s->g += i;
+
+			/* return num retained bytes */
+			return j;
+		}
+		break;
+		case S_STR_UTF16:
+		{
+			int i = 0, j = 0;
+			for (i = 0, j = 0; ((j < (maxlen > 0) ? maxlen : INT_MAX) && !s_eof (s)); i += 2)
+			{
+				/* make sure we stop reading before
+				 * reaching the delim */
+				if (s_peek (s) == (uint8_t) delim) {
+					break;
+				}
+
+				/* only write if we have a valid
+				 * output buffer */
+				if (str != NULL) {
+					/* only keep ascii-valid bytes */
+					if (s->buf[i + s->g] <= 128)
+					{
+						str[i] = (char) s->buf[i + s->g];
+						j++;
+					}
+				}
+			}
+
+			/* i is the number of bytes actually (!)
+			 * read; can be less */
+			s->g += i;
+
+			/* return num retained bytes */
+			return j;
+		}
+		break;
+		case S_STR_UTF32:
+		{
+			/* make sure we stop reading before
+			 * reaching the delim */
+			if (s_peek (s) == (uint8_t) delim) {
+				break;
+			}
+
+			int i = 0, j = 0;
+			for (i = 0, j = 0; ((j < (maxlen > 0) ? maxlen : INT_MAX) && !s_eof (s)); i += 4)
+			{
+				/* only write if we have a valid
+				 * output buffer */
+				if (str != NULL) {
+					/* only keep ascii-valid bytes */
+					if (s->buf[i + s->g] <= 128)
+					{
+						str[i] = (char) s->buf[i + s->g];
+						j++;
+					}
+				}
+			}
+
+			/* i is the number of bytes actually (!)
+			 * read; can be less */
+			s->g += i;
+
+			/* return num retained bytes */
+			return j;
+		}
+		break;
+	}
 }
 
 uint8_t* s_glance(stream_t* s)
