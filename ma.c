@@ -4,6 +4,7 @@
 #include <zlib.h>
 
 #include "list.h"
+#include "utf16.h"
 #include "hex.h"
 #include "zip.h"
 #include "zip_crypt.h"
@@ -138,11 +139,17 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 		inflate (&zs, Z_NO_FLUSH);
 		inflateEnd (&zs);
 		{
-			/* FIX TEST TODO!!! */
-			char* debugtodoremovex = (char*) z_buf_out;
+			stream_t tmps =
+				s_create_from_buf (z_buf_out, zfile.uncomp_size);
 
-			s_write (sout, z_buf_out, zfile.uncomp_size);
+			utf16_2_ascii (&tmps, sout);
+
+			s_free (&tmps);
 		}
+	}
+
+	{
+
 	}
 
 	{

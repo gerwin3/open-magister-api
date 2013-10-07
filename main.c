@@ -52,13 +52,39 @@ int easy_fread (char* path, stream_t* s)
 	return r;
 }
 
+int easy_fwrite (char* path, stream_t* s)
+{
+	int r = -1;
+	FILE* f = fopen (path, "wb");
+
+	if (f > 0)
+	{
+		if (fwrite ( (char*) s_glance (s), 1, s->len, f) == s->len) {
+			/* pretend we read it */
+			s_seekg (s, S_SEEK_END);
+			r = 0;
+		} else {
+			r = -1;
+		}
+
+		fclose (f);
+	}
+	else {
+		r = -1;
+	}
+
+	return r;
+}
+
 int main (int argc, char* argv[])
 {
-	stream_t s = s_create ();
+	stream_t sencoded = s_create ();
+	stream_t sdecoded = s_create ();
 
-	easy_fread ("J:\\Programming\\staging_workspace\\magister\\comm\\all-req\\req1", &s);
+	easy_fread ("J:\\Programming\\staging_workspace\\magister\\comm\\all-req\\req1", &sencoded);
 
-	ma__decode_request (&s, &s /*BOGUS*/);
+	ma__decode_request (&sencoded, &sdecoded);
+
 
 // 	struct ma_medius m;
 // 	int r;
