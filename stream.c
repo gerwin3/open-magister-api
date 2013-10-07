@@ -123,15 +123,15 @@ int s_read (stream_t* s, uint8_t* b, int len)
 	int i = 0;
 	for (i = 0; (i < len && !s_eof (s)); i++)
 	{
+		/* only write if we have a valid
+		 * output buffer */
 		if (b != NULL) {
-			/* only write if we have a valid
-			 * output buffer */
 			b[i] = s->buf[i + s->g];
 		}
 	}
 
 	/* i is the number of bytes actually (!)
-	 * written; can be less */
+	 * read; can be less */
 	s->g += i;
 
 	return i;
@@ -165,19 +165,93 @@ void s_write (stream_t* s, uint8_t* b, int len)
 	s->p += i;
 }
 
-void s_read_string(stream_t* s, char* str, int len, int format)
+int s_fread(stream_t* s, char* str, int len, int format)
 {
 	switch (format)
 	{
-		/*TODO !!!!*/
+		case S_STR_UTF8:
+		{
+			int i = 0, j = 0;
+			for (i = 0, j = 0; (j < len && !s_eof (s)); i++)
+			{
+				/* only write if we have a valid
+				 * output buffer */
+				if (str != NULL) {
+					/* only keep ascii-valid bytes */
+					if (s->buf[i + s->g] <= 128)
+					{
+						str[i] = (char) s->buf[i + s->g];
+						j++;
+					}
+				}
+			}
+
+			/* i is the number of bytes actually (!)
+			 * read; can be less */
+			s->g += i;
+
+			/* return num retained bytes */
+			return j;
+		}
+		break;
+		case S_STR_UTF16:
+		{
+			int i = 0, j = 0;
+			for (i = 0, j = 0; (j < len && !s_eof (s)); i += 2)
+			{
+				/* only write if we have a valid
+				 * output buffer */
+				if (str != NULL) {
+					/* only keep ascii-valid bytes */
+					if (s->buf[i + s->g] <= 128)
+					{
+						str[i] = (char) s->buf[i + s->g];
+						j++;
+					}
+				}
+			}
+
+			/* i is the number of bytes actually (!)
+			 * read; can be less */
+			s->g += i;
+
+			/* return num retained bytes */
+			return j;
+		}
+		break;
+		case S_STR_UTF32:
+		{
+			int i = 0, j = 0;
+			for (i = 0, j = 0; (j < len && !s_eof (s)); i += 4)
+			{
+				/* only write if we have a valid
+				 * output buffer */
+				if (str != NULL) {
+					/* only keep ascii-valid bytes */
+					if (s->buf[i + s->g] <= 128)
+					{
+						str[i] = (char) s->buf[i + s->g];
+						j++;
+					}
+				}
+			}
+
+			/* i is the number of bytes actually (!)
+			 * read; can be less */
+			s->g += i;
+
+			/* return num retained bytes */
+			return j;
+		}
+		break;
 	}
 }
 
-void s_write_string(stream_t* s, char* str, int len, int format)
+void s_fwrite(stream_t* s, char* str, int len, int format)
 {
 	switch (format)
 	{
-		/*TODO !!!!*/
+		/* TODO !!!! */
 	}
 }
 

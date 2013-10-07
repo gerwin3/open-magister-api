@@ -4,19 +4,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-/*
-#define S_MODE_G		0
-#define S_MODE_P		1 TODO: REMOVE */
-
 #define S_INIT_LEN		256
 
 #define S_SEEK_BEGIN	INT_MIN
 #define S_SEEK_END		INT_MAX
 
-#define S_STR_ASCII		0
-#define S_STR_UTF8		1
-#define S_STR_UTF16		2
-#define S_STR_UTF32		3
+#define S_STR_UTF8		0
+#define S_STR_UTF16		1
+#define S_STR_UTF32		2
 
 typedef struct
 {
@@ -47,8 +42,8 @@ int s_eof (stream_t* s);
 int s_read (stream_t* s, uint8_t* b, int len);
 void s_write (stream_t* s, uint8_t* b, int len);
 
-void s_read_string (stream_t* s, char* str, int len, int format);
-void s_write_string (stream_t* s, char* str, int len, int format);
+int s_fread (stream_t* s, char* str, int len, int format);
+int s_fwrite (stream_t* s, char* str, int len, int format);
 
 int s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen);
 
