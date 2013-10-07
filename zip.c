@@ -361,7 +361,7 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 				 * target fname with the current file name */
 				match = (memcmp (hdr_cdfile.fname,
 								 fname,
-								 min(hdr_cdfile.fname_len, strlen (fname))) == 0) ? 1 : 0;
+								 imin(hdr_cdfile.fname_len, strlen (fname))) == 0) ? 1 : 0;
 
 				if (match)
 				{
