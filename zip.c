@@ -422,6 +422,8 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 					/* we just took some data from the input stream
 					 * without shifting the get ptr; do it now */
 					s_seekg (s, finfo->comp_size);
+
+					return ZIP_OK;
 				}
 			}
 			case ZIP_HDR_LOCAL_FILE:
@@ -438,7 +440,7 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 				 * target fname with the current file name */
 				match = (memcmp (hdr_lfile.fname,
 								 fname,
-								 min(hdr_lfile.fname_len, strlen (fname))) == 0) ? 1 : 0;
+								 imin (hdr_lfile.fname_len, strlen (fname))) == 0) ? 1 : 0;
 
 				if (match)
 				{
@@ -499,6 +501,8 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 					/* we just took some data from the input stream
 					 * without shifting the get ptr; do it now */
 					s_seekg (s, finfo->comp_size);
+
+					return ZIP_OK;
 				}				
 			}
 			case ZIP_HDR_CENDIR_END:
@@ -509,6 +513,8 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 				return ZIP_EMALFORMED;
 		}
 	}
+
+	return ZIP_ENOTFOUND;
 }
 
 /*
