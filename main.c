@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
-/*#include <curl/curl.h>*/
+#include <Windows.h> /* don't worry, just for testing! */
 
 #include "stream.h"
 #include "ma.h"
@@ -78,13 +79,30 @@ int easy_fwrite (char* path, stream_t* s)
 
 int main (int argc, char* argv[])
 {
-	stream_t sencoded = s_create ();
-	stream_t sdecoded = s_create ();
+	char refpath[MAX_PATH] = "J:\\Programming\\staging_workspace\\magister\\comm\\all-resp\\resp";
 
-	easy_fread ("J:\\Programming\\staging_workspace\\magister\\comm\\all-req\\req1", &sencoded);
+	int i = 0;
+	for (i = 1; i <= 17; i++)
+	{
+		char path[MAX_PATH];
+		char suffix[] = "\0\0";
 
-	ma__decode_request (&sencoded, &sdecoded);
+		stream_t sencoded = s_create ();
+		stream_t sdecoded = s_create ();
 
+		/* construct path */
+		strcpy (path, refpath);
+		itoa (i, suffix, 10);
+		strcat (path, suffix);
+
+		/* read & decode */
+		easy_fread (path, &sencoded);
+		ma__decode_request (&sencoded, &sdecoded);
+
+		/* write to .out path */
+		strcat (path, ".out");
+		easy_fwrite (path, &sdecoded);	
+	}
 
 // 	struct ma_medius m;
 // 	int r;
