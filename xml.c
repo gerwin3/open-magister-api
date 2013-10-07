@@ -2,9 +2,10 @@
 
 int xml_quick_parse (stream_t* s, llist_t* out)
 {
+	int depth = 0;
 	while (!s_eof (s))
 	{
-
+		
 	}
 
 	/*

@@ -9,10 +9,6 @@
 #define S_SEEK_BEGIN	INT_MIN
 #define S_SEEK_END		INT_MAX
 
-#define S_STR_UTF8		0
-#define S_STR_UTF16		1
-#define S_STR_UTF32		2
-
 typedef struct
 {
 	uint8_t*	buf;	/* gets resized when more space is needed, size 
@@ -42,11 +38,7 @@ int s_eof (stream_t* s);
 int s_read (stream_t* s, uint8_t* b, int len);
 void s_write (stream_t* s, uint8_t* b, int len);
 
-int s_fread (stream_t* s, char* str, int len, int format);
-int s_fwrite (stream_t* s, char* str, int len, int format);
-
 int s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen);
-int s_fread_until (stream_t* s, char delim, char* str, int maxlen, int format);
 
 uint8_t* s_glance (stream_t* s);
 uint8_t s_peek (stream_t* s);
