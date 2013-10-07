@@ -1,5 +1,7 @@
 #include "zip.h"
 
+#include "common.h"
+
 typedef struct zip_hdr_base* zip_hdr_p;
 
 struct zip_hdr_base
@@ -87,10 +89,10 @@ int zip__hdr_type (const zip_hdr_p hdrp)
 			return ZIP_HDR_DATA_DESC;
 		break;
 		case 0x02014b50:
-			return ZIP_HDR_CEN_DIR;
+			return ZIP_HDR_CENDIR_FILE;
 		break;
 		case 0x06054b50:
-			return ZIP_HDR_CEN_DIR_END;
+			return ZIP_HDR_CENDIR_END;
 		break;
 		default:
 			return ZIP_HDR_UNKOWN;
@@ -108,10 +110,10 @@ int zip__hdr_sign (int hdrtype)
 		case ZIP_HDR_DATA_DESC:
 			return 0x08074b50;
 		break;
-		case ZIP_HDR_CEN_DIR:
+		case ZIP_HDR_CENDIR_FILE:
 			return 0x02014b50;
 		break;
-		case ZIP_HDR_CEN_DIR_END:
+		case ZIP_HDR_CENDIR_END:
 			return 0x06054b50;
 		break;
 		default:
@@ -166,10 +168,10 @@ int zip__read_hdr (stream_t* s, zip_hdr_p hdrp)
 			hdr->uncomp_size = s_read_int32 (s);
 		}
 		break;
-		case ZIP_HDR_CEN_DIR:
+		case ZIP_HDR_CENDIR_FILE:
 		{
-			struct zip_hdr_cen_dir* hdr =
-				(struct zip_hdr_cen_dir*) hdrp;
+			struct zip_hdr_cendir_file* hdr =
+				(struct zip_hdr_cendir_file*) hdrp;
 
 			hdr->sign = s_read_int32 (s);
 			hdr->madev = s_read_int16 (s);
@@ -199,10 +201,10 @@ int zip__read_hdr (stream_t* s, zip_hdr_p hdrp)
 			s_seekg (s, +hdr->fcomm_len);
 		}
 		break;
-		case ZIP_HDR_CEN_DIR_END:
+		case ZIP_HDR_CENDIR_END:
 		{
-			struct zip_hdr_cen_dir_end* hdr =
-				(struct zip_hdr_cen_dir_end*) hdrp;
+			struct zip_hdr_cendir_end* hdr =
+				(struct zip_hdr_cendir_end*) hdrp;
 
 			hdr->sign = s_read_int32 (s);
 			hdr->ndisk = s_read_int16 (s);
@@ -259,10 +261,10 @@ int zip__write_hdr (stream_t* s, zip_hdr_p hdrp)
 			s_write_int32 (s, hdr->uncomp_size);
 		}
 		break;
-		case ZIP_HDR_CEN_DIR:
+		case ZIP_HDR_CENDIR_FILE:
 		{
-			struct zip_hdr_cen_dir* hdr =
-				(struct zip_hdr_cen_dir*) hdrp;
+			struct zip_hdr_cendir_file* hdr =
+				(struct zip_hdr_cendir_file*) hdrp;
 
 			s_write_int32 (s, hdr->sign);
 			s_write_int16 (s, hdr->madev);
@@ -287,10 +289,10 @@ int zip__write_hdr (stream_t* s, zip_hdr_p hdrp)
 			s_write (s, (uint8_t*) hdr->fcomm, hdr->fcomm_len);
 		}
 		break;
-		case ZIP_HDR_CEN_DIR_END:
+		case ZIP_HDR_CENDIR_END:
 		{
-			struct zip_hdr_cen_dir_end* hdr =
-				(struct zip_hdr_cen_dir_end*) hdrp;
+			struct zip_hdr_cendir_end* hdr =
+				(struct zip_hdr_cendir_end*) hdrp;
 
 			s_write_int32 (s, hdr->sign);
 			s_write_int16 (s, hdr->ndisk);
@@ -310,131 +312,21 @@ int zip__write_hdr (stream_t* s, zip_hdr_p hdrp)
 	return ZIP_OK;
 }
 
-int zip__find_parse_cen_dir (stream_t* s, struct zip_hdr_cen_dir* hdr_cendir)
+int zip__seek_next_header (stream_t* s)
 {
-	int i = 0;
-
-	s_seekg (s, S_SEEK_END);
-	s_seekg (s, - ((int) sizeof (struct zip_hdr_cen_dir_end) - 1));
-
-	/* we'll try finding the end of central directory
-	 * header by looping back from the end and looking
-	 * for it's signature */
-	for (i = s_tellg (s); i > 0; i--)
+	while (!s_eof (s))
 	{
-		int hdrtype =
-			zip__peek_hdr_type (s);
-
-		if (hdrtype == ZIP_HDR_CEN_DIR_END || hdrtype == ZIP_HDR_CEN_DIR)
-		{
-			int eofs = 0;	
-			
-			/* we've found the cen dir end first, it can guide
-			 * us to the cen dir directly. */
-			if (hdrtype == ZIP_HDR_CEN_DIR_END)
-			{
-				struct zip_hdr_cen_dir_end hdr_cendirend;
-
-				if (zip__read_hdr (s, (zip_hdr_p) &hdr_cendirend) != ZIP_OK) {
-					return ZIP_EMALFORMED;
-				}
-
-				/* use the cen_dir_end header to find the actual
-				 * central directory */
-				s_seekg (s, S_SEEK_BEGIN);
-				s_seekg (s, +hdr_cendirend.cendir_off);
-			}
-
-			if (zip__read_hdr (s, (zip_hdr_p) hdr_cendir) != ZIP_OK) {
-				return ZIP_EMALFORMED;
-			}
-
-			return ZIP_OK;
-		}
-		else
-		{
-			/* seek back to the start minus 1 for the
-			 * to process the position before this one */
-			s_seekg (s, -1);
+		if (zip__peek_hdr_type (s) == ZIP_HDR_UNKOWN) {
+			s_seekg (s, +1);
+		} else {
+			/* found a valid header signature! */
+			break;
 		}
 	}
 
-	return ZIP_ENOTFOUND;
-}
-
-int zip__parse_file (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
-{
-	struct zip_hdr_local_file hdr_file;
-
-	if (zip__read_hdr (s, (zip_hdr_p) &hdr_file) != ZIP_OK) {
-		return ZIP_EMALFORMED;
-	}
-
-	/* copy over essential members ... */
-	finfo->fname = hdr_file.fname;
-	finfo->fname_len = hdr_file.fname_len;
-	finfo->flags = hdr_file.flags;
-	finfo->comp_method = hdr_file.method;
-	finfo->crc32 = hdr_file.crc32;
-	finfo->mod_time = hdr_file.mod_time;
-	finfo->mod_date = hdr_file.mod_date;
-	finfo->comp_size = hdr_file.comp_size;
-	finfo->uncomp_size = hdr_file.uncomp_size;
-
-	/* some of the data we need might be hidden in the
-	 * data descriptor, if available */
-	if (hdr_file.flags & ZIP_FLAG_DATA_DESC)
-	{
-		int i = 0;
-		for (i = 0; !s_eof (s); i++, s_seekg (s, +1))
-		{
-			/* found the data descriptor yet? */
-			if (zip__peek_hdr_type (s) == ZIP_HDR_DATA_DESC)
-			{
-				struct zip_hdr_data_desc* hdr_ddesc_test =
-					(struct zip_hdr_data_desc*) s_glance (s);
-
-				/* try to validate the header, to make it very
-				 * unlikely we ever run into a collision */
-				if (hdr_ddesc_test->comp_size == i)
-				{
-					struct zip_hdr_data_desc hdr_ddesc;
-
-					/* this is definitely the header we're looking
-					 * for... parse */
-					if (zip__read_hdr (s, (zip_hdr_p) &hdr_ddesc) != 0) {
-						return -1;
-					}
-
-					/* these are the ones we need! */
-					finfo->comp_size = hdr_ddesc.comp_size;
-					finfo->uncomp_size = hdr_ddesc.uncomp_size;
-					finfo->crc32 = hdr_ddesc.crc32;
-
-					/* as if it never happened */
-					s_seekg (s, - (int) (i + sizeof (struct zip_hdr_data_desc)));
-
-					break;
-				}
-			}
-		}
-
-		if (finfo->comp_size > 0 && finfo->uncomp_size)
-		{
-			/* write the - still compressed - data to the
-			 * provided output stream */
-			s_write (fs, s_glance (s), finfo->comp_size);
-
-			/* we just took some data from the input stream
-			 * without shifting the get ptr; do it now */
-			s_seekg (s, finfo->comp_size);
-
-			return 0;
-		}
-		else {
-			return ZIP_EMALFORMED;
-		}
-	}
+	/* if we've read the whole stream we failed to
+	 * find a valid header */
+	return (s_eof (s) ? ZIP_ENOTFOUND : ZIP_OK);
 }
 
 /*
@@ -447,60 +339,176 @@ int zip__parse_file (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
  */
 int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs)
 {
-	int eofs = 0;
-	struct zip_hdr_cen_dir hdr_cendir;
-
-	/* first, find the central directory header, it
-	 * will guide us the rest of the parsing process */
-	if (zip__find_parse_cen_dir (s, &hdr_cendir) != ZIP_OK) {
-		return ZIP_EMALFORMED;
-	}
-
-	/* locate and read the first local file header */
-	s_seekg (s, S_SEEK_BEGIN);
-	s_seekg (s, +hdr_cendir.fhdr_off);
-
-	while (!eofs)
+	while (!s_eof (s))
 	{
-		/* we can find out what header we're currently
-		 * onto, this only works because the parsing
-		 * functions always seek until directly after
-		 * their last block */
+		/* seek the stream to right before the next header;
+		 * will mostly yield immediately */
+		zip__seek_next_header (s);
+
 		switch (zip__peek_hdr_type (s))
 		{
-			case ZIP_HDR_LOCAL_FILE:
+			case ZIP_HDR_CENDIR_FILE:
 			{
-				/* it seems to be a file, parse it! */
-				if (zip__parse_file (s, finfo, fs) == ZIP_OK)
-				{
-					if (memcmp (fname, finfo->fname, finfo->fname_len) == 0)
-					{
-						/* yes, we found the file! */
-						return ZIP_OK;
-					}
-					else {
-						/* reset memory to prevent confusion ;) */
-						memset (finfo, 0, sizeof (struct zip_file_info));
-					}
-				}
-				else {
+				struct zip_hdr_cendir_file hdr_cdfile;
+				int match = 0;
+				int fpos = 0;
+
+				if (zip__read_hdr (s, (zip_hdr_p) &hdr_cdfile) != ZIP_OK) {
 					return ZIP_EMALFORMED;
 				}
+
+				/* decide if this is a match by comparing the
+				 * target fname with the current file name */
+				match = (memcmp (hdr_cdfile.fname,
+								 fname,
+								 min(hdr_cdfile.fname_len, strlen (fname))) == 0) ? 1 : 0;
+
+				if (match)
+				{
+					/* copy over essential members ... */
+					finfo->fname = hdr_cdfile.fname;
+					finfo->fname_len = hdr_cdfile.fname_len;
+					finfo->flags = hdr_cdfile.flags;
+					finfo->comp_method = hdr_cdfile.method;
+					finfo->crc32 = hdr_cdfile.crc32;
+					finfo->mod_time = hdr_cdfile.mod_time;
+					finfo->mod_date = hdr_cdfile.mod_date;
+					finfo->comp_size = hdr_cdfile.comp_size;
+					finfo->uncomp_size = hdr_cdfile.uncomp_size;
+				}
+
+				/* store position of file date, we might need it
+				 * later on! */
+				fpos = s_tellg (s);
+
+				/* some of the data we need might be hidden in the
+				 * data descriptor, if available */
+				if (hdr_cdfile.flags & ZIP_FLAG_DATA_DESC)
+				{
+					zip__seek_next_header (s);
+
+					/* found the data descriptor yet? */
+					if (zip__peek_hdr_type (s) == ZIP_HDR_DATA_DESC)
+					{
+						struct zip_hdr_data_desc hdr_ddesc;
+						if (zip__read_hdr (s, (zip_hdr_p) &hdr_ddesc) != 0) {
+							return -1;
+						}
+
+						if (match)
+						{
+							/* these are the ones we need! */
+							finfo->comp_size = hdr_ddesc.comp_size;
+							finfo->uncomp_size = hdr_ddesc.uncomp_size;
+							finfo->crc32 = hdr_ddesc.crc32;
+						}
+					}
+					else {
+						return ZIP_EMALFORMED;
+					}
+				}
+
+				/* only do the copying if we need to! */
+				if (match)
+				{
+					/* rewind to the file data! */
+					s_seekg (s, S_SEEK_BEGIN);
+					s_seekg (s, +fpos);
+
+					/* write the - still compressed - data to the
+					 * provided output stream */
+					s_write (fs, s_glance (s), finfo->comp_size);
+
+					/* we just took some data from the input stream
+					 * without shifting the get ptr; do it now */
+					s_seekg (s, finfo->comp_size);
+				}
 			}
-			break;
-			case ZIP_HDR_CEN_DIR:
-			case ZIP_HDR_CEN_DIR_END:
-				/* when the cen (end) dir header is found, there
-				 * will be no more local file headers to come. */
-				eofs = 1;
-			break;
+			case ZIP_HDR_LOCAL_FILE:
+			{
+				struct zip_hdr_local_file hdr_lfile;
+				int match = 0;
+				int fpos = 0;
+
+				if (zip__read_hdr (s, (zip_hdr_p) &hdr_lfile) != ZIP_OK) {
+					return ZIP_EMALFORMED;
+				}
+
+				/* decide if this is a match by comparing the
+				 * target fname with the current file name */
+				match = (memcmp (hdr_lfile.fname,
+								 fname,
+								 min(hdr_lfile.fname_len, strlen (fname))) == 0) ? 1 : 0;
+
+				if (match)
+				{
+					/* copy over essential members ... */
+					finfo->fname = hdr_lfile.fname;
+					finfo->fname_len = hdr_lfile.fname_len;
+					finfo->flags = hdr_lfile.flags;
+					finfo->comp_method = hdr_lfile.method;
+					finfo->crc32 = hdr_lfile.crc32;
+					finfo->mod_time = hdr_lfile.mod_time;
+					finfo->mod_date = hdr_lfile.mod_date;
+					finfo->comp_size = hdr_lfile.comp_size;
+					finfo->uncomp_size = hdr_lfile.uncomp_size;
+				}
+
+				/* store position of file date, we might need it
+				 * later on! */
+				fpos = s_tellg (s);
+
+				/* some of the data we need might be hidden in the
+				 * data descriptor, if available */
+				if (hdr_lfile.flags & ZIP_FLAG_DATA_DESC)
+				{
+					zip__seek_next_header (s);
+
+					/* found the data descriptor yet? */
+					if (zip__peek_hdr_type (s) == ZIP_HDR_DATA_DESC)
+					{
+						struct zip_hdr_data_desc hdr_ddesc;
+						if (zip__read_hdr (s, (zip_hdr_p) &hdr_ddesc) != 0) {
+							return -1;
+						}
+
+						if (match)
+						{
+							/* these are the ones we need! */
+							finfo->comp_size = hdr_ddesc.comp_size;
+							finfo->uncomp_size = hdr_ddesc.uncomp_size;
+							finfo->crc32 = hdr_ddesc.crc32;
+						}
+					}
+					else {
+						return ZIP_EMALFORMED;
+					}
+				}
+
+				/* only do the copying if we need to! */
+				if (match)
+				{
+					/* rewind to the file data! */
+					s_seekg (s, S_SEEK_BEGIN);
+					s_seekg (s, +fpos);
+
+					/* write the - still compressed - data to the
+					 * provided output stream */
+					s_write (fs, s_glance (s), finfo->comp_size);
+
+					/* we just took some data from the input stream
+					 * without shifting the get ptr; do it now */
+					s_seekg (s, finfo->comp_size);
+				}				
+			}
+			case ZIP_HDR_CENDIR_END:
+			case ZIP_HDR_DATA_DESC:
+				/* just ignore the other headers :) */
+				continue;
 			default:
-				/* unexpected! */
-				eofs = 1;
+				return ZIP_EMALFORMED;
 		}
 	}
-
-	return ZIP_ENOTFOUND;
 }
 
 /*
@@ -562,27 +570,20 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 
 	{
 		/* construct and write the central directory */
-		struct zip_hdr_cen_dir hdr_cendir = {
-			zip__hdr_sign (ZIP_HDR_CEN_DIR),
+		struct zip_hdr_cendir_end hdr_cdend = {
+			zip__hdr_sign (ZIP_HDR_CENDIR_END),
 			0,
 			0,
-			finfo->flags,
-			finfo->comp_method,
-			finfo->mod_time,
-			finfo->mod_date,
-			finfo->crc32,
-			finfo->comp_size,
-			finfo->uncomp_size,
-			finfo->fname_len,
+			1,				/* number of cendirs: 1 */
 			0,
+			s_tellp (s),	/* the offset to the cendir is the start
+							 * of the cd_end hdr, because we don't
+							 * have any entries in it. */
 			0,
-			0,
-			0,
-			0,
-			0
+			NULL
 		};
 
-		if (zip__write_hdr (s, (zip_hdr_p) &hdr_cendir) != ZIP_OK) {
+		if (zip__write_hdr (s, (zip_hdr_p) &hdr_cdend) != ZIP_OK) {
 			return ZIP_EINVAL;
 		}
 	}
@@ -590,7 +591,7 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 	/* wrote:
 	 *	- local file header
 	 *	- file data
-	 *	- central directory header
+	 *	- end of central dir
 	 * => done! */
 	return ZIP_OK;
 }
