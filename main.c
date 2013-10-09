@@ -8,6 +8,8 @@
 #include "stream.h"
 #include "ma.h"
 
+#include "base64.h" /* TODO: Remove */
+
 /*	MODULE		  |	STATUS		  |	LIB			  |	
  *	-----------------------------------------------
  *	hex <-> bin		Done			hex.h / My
@@ -79,6 +81,24 @@ int easy_fwrite (char* path, stream_t* s)
 
 int main (int argc, char* argv[])
 {
+	stream_t s1 =
+		s_create ();
+	stream_t s2 =
+		s_create ();
+	stream_t s3 =
+		s_create ();
+
+	s_write (&s1, (uint8_t*) "any carnal. pleasure.", strlen ("any carnal. pleasure."));
+
+	base64_encode (&s1, &s2);
+	base64_decode (&s2, &s3);
+
+	s_free (&s1);
+	s_free (&s2);
+	s_free (&s3);
+
+	return 0;
+	/*
 	char refpath[MAX_PATH] = "J:\\Programming\\staging_workspace\\magister\\comm\\all-resp\\resp";
 
 	int i = 0;
@@ -90,19 +110,19 @@ int main (int argc, char* argv[])
 		stream_t sencoded = s_create ();
 		stream_t sdecoded = s_create ();
 
-		/* construct path */
+		/* construct path *
 		strcpy (path, refpath);
 		itoa (i, suffix, 10);
 		strcat (path, suffix);
 
-		/* read & decode */
+		/* read & decode *
 		easy_fread (path, &sencoded);
 		ma__decode_request (&sencoded, &sdecoded);
 
-		/* write to .out path */
+		/* write to .out path *
 		strcat (path, ".out");
 		easy_fwrite (path, &sdecoded);	
-	}
+	}*/
 
 // 	struct ma_medius m;
 // 	int r;
