@@ -11,6 +11,12 @@
 #define MAX_NHDRS		64
 #define MAX_CONTENT		1000000 /* 1MB of storage, use carefully */
 
+#define MA_OK			0
+#define MA_EINVAL		-1
+#define MA_EMALFORMED	-2
+#define MA_ENOTFOUND	-3
+#define MA_ECONNECTION	-4
+
 #define MA_SVC_MEDIUS	"MediusService.svc"
 #define MA_SVC_LOG		"LogService.svc"
 #define MA_SVC_DATA		"DataService.svc"
@@ -22,16 +28,12 @@
 #define MA_SVC_AGENDA	"AgendaService.svc"
 #define MA_SVC_ROOSTER	"RoosterwijzigingenService.svc"
 
-#define MA_OK			0
-#define MA_EINVAL		-1
-#define MA_EMALFORMED	-2
-#define MA_ENOTFOUND	-3
-#define MA_ECONNECTION	-4
-
 #define MA_SOAP_PREFIX	"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><data>"
 #define MA_SOAP_POSTFIX	"</data></s:Body></s:Envelope>"
 
+#define MA_ZIP_NAME		"content"
 #define MA_ZIP_PASSWORD	"yawUBRu+reduka5UPha2#=cRUc@ThekawEvuju&?g$dru9ped=a@REQ!7h_?anut"
+#define MA_ZIP_MODTIME	0x5eed
 
 struct ma_medius
 {

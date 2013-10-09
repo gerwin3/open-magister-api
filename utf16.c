@@ -4,7 +4,7 @@
  *	converts utf16 bytes into ascii (7-bit)
  *	characters; removes any non-ascii chars.
  */
-int utf16_to_ascii (stream_t* sin, stream_t* sout)
+void utf16_to_ascii (stream_t* sin, stream_t* sout)
 {
 	while (!s_eof (sin))
 	{
@@ -22,7 +22,7 @@ int utf16_to_ascii (stream_t* sin, stream_t* sout)
  *	a zero byte after every 7-bit ascii chars;
  *	removes any non-ascii chars.
  */
-int ascii_to_utf16 (stream_t* sin, stream_t* sout)
+void ascii_to_utf16 (stream_t* sin, stream_t* sout)
 {
 	while (!s_eof (sin))
 	{

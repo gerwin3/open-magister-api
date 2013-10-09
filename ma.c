@@ -64,7 +64,126 @@ int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 }
 
 /*
- *	decodes data from the magister servers
+ *	encodes some request data to make it readable
+ *	for magister servers.
+ *	 - sin: input data
+ *	 - sout: output data
+ */
+int ma__encode_request (stream_t* sin, stream_t* sout)
+{
+	int r = 0;
+	stream_t s1, s2, s3;
+
+	s1 = s_create ();
+	s2 = s_create ();
+	s3 = s_create ();
+
+	/*
+	 *	L6: UTF-16 encoded
+	 *	 -> converts ASCII to UTF-16
+	 */
+	ascii_to_utf16 (sin, &s1);
+
+	/*
+	 *	L5: DEFLATE compressed bytes
+	 *	 -> compress them
+	 */
+
+	uint8_t* z_buf_out =
+		(uint8_t*) malloc (sin->len);
+
+	/* initialize a 'z_stream' that zlib uses to
+	 * inflate/deflate this data */
+	z_stream z_strm;
+	z_strm.zalloc = Z_NULL;
+	z_strm.zfree = Z_NULL;
+	z_strm.opaque = Z_NULL;
+	z_strm.avail_in = (uInt) s1.len;
+	z_strm.next_in = (Bytef*) s1.buf;
+	z_strm.avail_out = (uInt) s1.len;
+	z_strm.next_out = (Bytef*) z_buf_out;
+
+	/* use zlib to deflate the data, the second
+	 * argument, -13, makes this a raw deflate */
+	deflateInit2 (&z_strm,
+				  Z_DEFAULT_COMPRESSION,
+				  Z_DEFLATED, -13, 8,
+				  Z_DEFAULT_STRATEGY);
+
+	if (deflate (&z_strm, Z_NO_FLUSH) == Z_OK)
+	{
+		stream_t stmp =
+			s_create_from_buf (z_buf_out, z_strm.total_out);
+
+		/*
+		 *	L4: PK Zip encryption
+		 *	 -> encrypt with MA_ZIP_PASSWORD
+		 */
+		if (zip_encrypt (&stmp, &s2, MA_ZIP_PASSWORD, MA_ZIP_MODTIME) == ZIP_CRYPT_OK)
+		{
+			struct zip_file_info zfile = {
+				MA_ZIP_NAME,			/* => content */
+				strlen (MA_ZIP_NAME),
+				ZIP_FLAG_ENCRYPTED |	/* we have encrypted the data! */
+				ZIP_FLAG_DATA_DESC,		/* using a data descriptor */
+				ZIP_METHOD_DEFLATED,
+				z_strm.total_out,		/* size of compressed data */
+				s1.len,					/* and before compression */
+				MA_ZIP_MODTIME,			/* is used as seed for decryption */
+				0,
+				0						/* TODO: This might cause problems! */
+			};
+
+			/*
+			 *	L3: Zip container
+			 *	 -> extract the 'content' file from the zip
+			 */
+			if (zip_file_write (&s2, &zfile, &s3) == ZIP_OK)
+			{
+				/*
+				 *	L1: SOAP layer
+				 *	 -> write soap prefix/header
+				 */
+				s_write (sout, (uint8_t*) MA_SOAP_PREFIX, strlen (MA_SOAP_PREFIX));
+
+				/*
+				 *	L2: hexdec layer
+				 *	 -> convert to binary with hex2bin ()
+				 */
+				bin2hex (&s3, sout);
+
+				/*
+				 *	L1: SOAP layer
+				 *	 -> write soap postfix/footer
+				 */
+				s_write (sout, (uint8_t*) MA_SOAP_POSTFIX, strlen (MA_SOAP_POSTFIX));
+
+				r = MA_OK;
+			}
+			else {
+				r = MA_EINVAL;
+			}
+		}
+		else {
+			r = MA_EINVAL;
+		}
+
+		s_free (&stmp);
+	}
+	else {
+		r = MA_EINVAL;
+	}
+
+	free (z_buf_out);
+
+	s_free (&s1);
+	s_free (&s2);
+	s_free (&s3);
+}
+
+/*
+ *	decodes data from the magister servers to a
+ *	format that can easily be parsed.
  *	 - sin: input data
  *	 - sout: output data
  */
@@ -73,7 +192,7 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 	/* init */
 
 	int r = 0;
-	stream_t s1, s2, s3;
+	stream_t s1, s2, s3, stmp;
 
 	struct zip_file_info zfile;
 
@@ -81,90 +200,97 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 	s2 = s_create ();
 	s3 = s_create ();
 
-	/* decode */
+	/*
+	 *	L1: SOAP layer
+	 *	 -> simply skip the header
+	 */
+	s_seekg (sin, + strlen (MA_SOAP_PREFIX));
 
+	/*
+	 *	L2: hexdec layer
+	 *	 -> convert to binary with hex2bin ()
+	 */
+	hex2bin (sin, &s1);
+
+	/*
+	 *	L3: Zip container
+	 *	 -> extract the 'content' file from the zip
+	 */
+	if (zip_file_read (&s1, MA_ZIP_NAME, &zfile, &s2) == ZIP_OK)
 	{
 		/*
-		*	L1: SOAP layer
-		*	 -> simply skip the header
-		*/
-		s_seekg (sin, + strlen (MA_SOAP_PREFIX));
-	}
-
-	{
-		/*
-		*	L2: hexdec layer
-		*	 -> convert to binary with hex2bin ()
-		*/
-		hex2bin (sin, &s1);
-	}
-
-	{
-		/*
-		*	L3: Zip container
-		*	 -> extract the 'content' file from the zip
-		*/
-		zip_file_read (&s1, "content", &zfile, &s2);
-	}
-
-	{
-		/*
-		*	L4: PK Zip encryption
-		*	 -> decrypt with MA_ZIP_PASSWORD
-		*/
-		if (zip_decrypt (&s2, &s3, MA_ZIP_PASSWORD, zfile.mod_time) != 0)
+		 *	L4: PK Zip encryption
+		 *	 -> decrypt with MA_ZIP_PASSWORD
+		 */
+		if (zip_decrypt (&s2, &s3, MA_ZIP_PASSWORD, zfile.mod_time) == ZIP_CRYPT_OK)
 		{
-			/* Log Warning */
+			/*
+			 *	L5: DEFLATE compressed bytes
+			 *	 -> uncompress them
+			 */
+
+			uint8_t* z_buf_out =
+				(uint8_t*) malloc (zfile.uncomp_size);
+
+			/* initialize a 'z_stream' that zlib uses to
+			 * inflate/deflate this data */
+			z_stream z_strm;
+			z_strm.zalloc = Z_NULL;
+			z_strm.zfree = Z_NULL;
+			z_strm.opaque = Z_NULL;
+			z_strm.avail_in = (uInt) s3.len;
+			z_strm.next_in = (Bytef*) s3.buf;
+			z_strm.avail_out = (uInt) zfile.uncomp_size;
+			z_strm.next_out = (Bytef*) z_buf_out;
+
+			/* use zlib to inflate the data, the second
+			 * argument, -13, makes this a raw inflate */
+			inflateInit2 (&z_strm, -13);
+
+			if (inflate (&z_strm, Z_NO_FLUSH) == Z_OK)
+			{
+				/*
+				 *	L6: UTF-16 encoded
+				 *	 -> we want regular ASCII for parsing
+				 */
+				stmp = s_create_from_buf (z_buf_out,
+										  zfile.uncomp_size);
+
+				utf16_to_ascii (&stmp, sout);
+	
+				/*
+				 *	L1: SOAP layer
+				 *	 -> also skip the footer, for clarity
+				 */
+				s_seekg (sin, + strlen (MA_SOAP_POSTFIX));
+
+				/* seems like we made it :) */
+				r = MA_OK;
+			}
+			else {
+				r = MA_EMALFORMED;
+			}
+
+			inflateEnd (&z_strm);
+
+			free (z_buf_out);
+		}
+		else {
+			r = MA_EMALFORMED;
 		}
 	}
-
-	{
-		/*
-		*	L5: DEFLATE compressed bytes
-		*	 -> uncompress them
-		*/
-		uint8_t* z_buf_out = (uint8_t*)
-			malloc (zfile.uncomp_size);
-
-		z_stream zs;
-		zs.zalloc = Z_NULL;
-		zs.zfree = Z_NULL;
-		zs.opaque = Z_NULL;
-		zs.avail_in = (uInt) s3.len;	/* we've gotta hack these out of there ... */
-		zs.next_in = (Bytef*) s3.buf;	/* ... to make this less painful */
-		zs.avail_out = (uInt) zfile.uncomp_size;
-		zs.next_out = (Bytef*) z_buf_out;
-
-		inflateInit2 (&zs, -13);
-		inflate (&zs, Z_NO_FLUSH);
-		inflateEnd (&zs);
-		{
-			stream_t tmps =
-				s_create_from_buf (z_buf_out, zfile.uncomp_size);
-
-			utf16_to_ascii (&tmps, sout);
-
-			s_free (&tmps);
-		}
-	}
-
-	{
-
-	}
-
-	{
-		/*
-		*	L1: SOAP layer
-		*	 -> also skip the footer, for clarity
-		*/
-		s_seekg (sin, + strlen (MA_SOAP_POSTFIX));
+	else {
+		r = MA_EMALFORMED;
 	}
 
 	/* deinit */
 
+	s_free (&stmp);
 	s_free (&s1);
 	s_free (&s2);
 	s_free (&s3);
+
+	return r;
 }
 
 /*
