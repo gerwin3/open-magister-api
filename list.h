@@ -29,13 +29,13 @@ struct llist_node
 	struct llist_node* previous;
 };
 
-extern llist_t ll_create ();
-extern void ll_free (llist_t* l);
+llist_t ll_create ();
+void ll_free (llist_t* l);
 
-extern struct llist_node* ll_push (llist_t* l, void* v);
-extern int ll_comp_size (llist_t* l);
+struct llist_node* ll_push (llist_t* l, void* v);
+int ll_comp_size (llist_t* l);
 
-extern struct llist_node* ll_node_push (llist_t* l, struct llist_node* n, void* v);
-extern void* ll_node_pop (llist_t* l, struct llist_node* n);
+struct llist_node* ll_node_push (llist_t* l, struct llist_node* n, void* v);
+void* ll_node_pop (llist_t* l, struct llist_node* n);
 
 #endif

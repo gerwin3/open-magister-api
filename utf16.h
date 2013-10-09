@@ -3,7 +3,7 @@
 
 #include "stream.h"
 
-extern int utf16_2_ascii (stream_t* sin, stream_t* sout);
-extern int ascii_2_utf16 (stream_t* sin, stream_t* sout);
+int utf16_to_ascii (stream_t* sin, stream_t* sout);
+int ascii_to_utf16 (stream_t* sin, stream_t* sout);
 
 #endif

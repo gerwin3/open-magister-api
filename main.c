@@ -8,17 +8,17 @@
 #include "stream.h"
 #include "ma.h"
 
-#include "base64.h" /* TODO: Remove */
+#include "zip_crypt.h"
 
 /*	MODULE		  |	STATUS		  |	LIB			  |	
  *	-----------------------------------------------
  *	hex <-> bin		Done			hex.h / My
- *	zip headers		Untested		zip.h / My
- *	zip crypto		Untested		zypt.h / Xceed
- *	XML				Progressing		?
+ *	zip headers		>Untested<Done	zip.h / My
+ *	zip crypto		Done			zypt.h / Xceed
+ *	XML				Poss. Obsolete	?
  *	SOAP			Done			? / My
  *	HTTPS			Done			curl (.h)
- *	DEFLATE			Untested		zlib (.h)
+ *	DEFLATE			Done (Unused)	zlib (.h)
  */
 
 int easy_fread (char* path, stream_t* s)
@@ -81,72 +81,45 @@ int easy_fwrite (char* path, stream_t* s)
 
 int main (int argc, char* argv[])
 {
-	stream_t s1 =
-		s_create ();
-	stream_t s2 =
-		s_create ();
-	stream_t s3 =
-		s_create ();
+	int ret;
+	stream_t s1 = s_create ();
+	stream_t s2 = s_create ();
+	stream_t s3 = s_create ();
 
-	s_write (&s1, (uint8_t*) "any carnal. pleasure.", strlen ("any carnal. pleasure."));
+	s_write (&s1, (uint8_t*) "To beer or not to beer. Beer.",
+					 strlen ("To beer or not to beer. Beer."));
 
-	base64_encode (&s1, &s2);
-	base64_decode (&s2, &s3);
+	if (zip_encrypt (&s1, &s2, "SeCrEt!", 1337) != ZIP_CRYPT_OK) {
+		return -1;
+	}
 
-	s_free (&s1);
-	s_free (&s2);
-	s_free (&s3);
+	ret = zip_decrypt (&s2, &s3, "SeCrEt!", 1337);
 
-	return 0;
-	/*
-	char refpath[MAX_PATH] = "J:\\Programming\\staging_workspace\\magister\\comm\\all-resp\\resp";
+	ret = (ret == 0);
 
-	int i = 0;
-	for (i = 1; i <= 17; i++)
-	{
-		char path[MAX_PATH];
-		char suffix[] = "\0\0";
-
-		stream_t sencoded = s_create ();
-		stream_t sdecoded = s_create ();
-
-		/* construct path *
-		strcpy (path, refpath);
-		itoa (i, suffix, 10);
-		strcat (path, suffix);
-
-		/* read & decode *
-		easy_fread (path, &sencoded);
-		ma__decode_request (&sencoded, &sdecoded);
-
-		/* write to .out path *
-		strcat (path, ".out");
-		easy_fwrite (path, &sdecoded);	
-	}*/
-
-// 	struct ma_medius m;
-// 	int r;
-// 
-// 	curl_global_init (CURL_GLOBAL_ALL);
 // 	
-// 	r = ma_medius_init (&m, "sga.swp.nl");
+// 	char refpath[MAX_PATH] = "J:\\Programming\\staging_workspace\\magister\\comm\\all-resp\\resp";
 // 
-// 	/*
-// 		test:
-// 			read all files in {f} and
-// 				for each f in {f}
-// 					ma__decode_request ( f as stream,
-// 										 stdout as stream )
+// 	int i = 0;
+// 	for (i = 1; i <= 17; i++)
+// 	{
+// 		char path[MAX_PATH];
+// 		char suffix[] = "\0\0";
 // 
-// 	/*
-// 		.... do stuff ....
+// 		stream_t sencoded = s_create ();
+// 		stream_t sdecoded = s_create ();
 // 
-// 		...
-// 	 */
+// 		/* construct path */
+// 		strcpy (path, refpath);
+// 		itoa (i, suffix, 10);
+// 		strcat (path, suffix);
 // 
-// 
-// 
-// 	ma_medius_delete (&m);
-// 
-// 	curl_global_cleanup ();
+// 		/* read & decode */
+// 		easy_fread (path, &sencoded);
+// 		ma__decode_request (&sencoded, &sdecoded);
+// 		
+// 		/* write to .out path */
+// 		strcat (path, ".out");
+// 		easy_fwrite (path, &sdecoded);	
+// 	}
 }

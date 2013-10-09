@@ -59,7 +59,7 @@ struct zip_file_info
 	uint32_t crc32;
 };
 
-extern int zip_file_read (stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs);
-extern int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs);
+int zip_file_read (stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs);
+int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs);
 
 #endif

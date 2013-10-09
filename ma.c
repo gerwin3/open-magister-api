@@ -142,7 +142,7 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 			stream_t tmps =
 				s_create_from_buf (z_buf_out, zfile.uncomp_size);
 
-			utf16_2_ascii (&tmps, sout);
+			utf16_to_ascii (&tmps, sout);
 
 			s_free (&tmps);
 		}

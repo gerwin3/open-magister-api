@@ -23,7 +23,7 @@ struct xml_tag
 	int		depth;
 };
 
-extern int xml_quick_parse (stream_t* sin, llist_t* out, int sformat);
-extern int xml_quick_write (llist_t* in, stream_t* sout, int sformat);
+int xml_find_tag (stream_t* sin, const char* name, struct xml_tag* tag);
+int xml_write_tag (llist_t* in, stream_t* sout, int sformat);
 
 #endif
