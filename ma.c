@@ -10,13 +10,13 @@
 #include "zip_crypt.h"
 
 /*
- *	callback - utilized by curl, used by us - to read
- *	response data
+ *	Callback - utilized by curl, used by us - to read
+ *	response data.
  *	 - buf: response data
  *	 - size: byte size
  *	 - len: num byte
- *	 - userp: pointer provided by us; will be converted
- *			  to stream_t* to write output data
+ *	 - userp: Pointer provided by us; will be converted
+ *			  to stream_t* to write output data.
  */
 int ma__receive_callback (void* buf, size_t size, size_t len, void* userp)
 {
@@ -28,14 +28,14 @@ int ma__receive_callback (void* buf, size_t size, size_t len, void* userp)
 }
 
 /*
- *	callback - utilized by curl, used by us - to read
- *	response headers
+ *	Callback - utilized by curl, used by us - to read
+ *	response headers.
  *	 - buf: header line bytes
  *	 - size: byte size
  *	 - len: num byte
- *	 - userp: pointer provided by us; will be converted
+ *	 - userp: Pointer provided by us; will be converted
  *			  to llist_*, containing header-var's that
- *			  are to be replaced by their values
+ *			  are to be replaced by their values.
  */
 int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 {
@@ -64,7 +64,7 @@ int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 }
 
 /*
- *	encodes some request data to make it readable
+ *	Encodes some request data to make it readable
  *	for magister servers.
  *	 - sin: input data
  *	 - sout: output data
@@ -182,7 +182,7 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 }
 
 /*
- *	decodes data from the magister servers to a
+ *	Decodes data from the magister servers to a
  *	format that can easily be parsed.
  *	 - sin: input data
  *	 - sout: output data
@@ -294,12 +294,12 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 }
 
 /*
- *	carries out request to the schoolmaster servers and
- *	acquires and returns decoded XML data
- *	 - m: session pointer, acquired by ma_medius_init
- *	 - service: type of service to send the request to
- *	 - req: request data, will be encoded
- *	 - resp: response data, will be decoded
+ *	Carries out request to the schoolmaster servers and
+ *	acquires and returns decoded XML data.
+ *	 - m: Session pointer, acquired by ma_medius_init.
+ *	 - service: Type of service to send the request to.
+ *	 - req: Request data, will be encoded.
+ *	 - resp: Response data, will be decoded.
  */
 int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, stream_t* resp)
 {
@@ -357,10 +357,10 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 }
 
 /*
- *	makes first contact with the medius server;
- *	verifies connection and acquires init data
+ *	Makes first contact with the medius server;
+ *	verifies connection and acquires init data.
  *	 - m: session ptr
- *	 - name: name of medius server (e.g. example.swp.nl)
+ *	 - name: Name of medius server (e.g. example.swp.nl).
  */
 int ma_medius_init (struct ma_medius* m, const char* name)
 {

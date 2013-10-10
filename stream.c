@@ -3,8 +3,8 @@
 #include <limits.h>
 
 /*
- *	increase the g offset, check for eof, return the
- *	value (if != yet eof) with an adjusted index
+ *	Increase the g offset, check for eof, return the
+ *	value (if != yet eof).
  */
 #define S_READ_INTX(Type) \
 	\
@@ -17,8 +17,8 @@
 	return * ( (Type*) &s->buf[s->g - sizeof (Type)]);
 
 /*
- *	increase the p offset, check for eof, return the
- *	value (if != yet eof) with an adjusted index
+ *	Increase the p offset, check for eof, possibly
+ *	realloc some space, append value x.
  */
 #define S_WRITE_INTX(Type) \
 	\

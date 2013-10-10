@@ -1,8 +1,8 @@
 #include "utf16.h"
 
 /*
- *	converts utf16 bytes into ascii (7-bit)
- *	characters; removes any non-ascii chars.
+ *	Converts utf16 bytes into ascii (7-bit)
+ *	characters; Removes any non-ascii chars.
  */
 void utf16_to_ascii (stream_t* sin, stream_t* sout)
 {
@@ -18,9 +18,9 @@ void utf16_to_ascii (stream_t* sin, stream_t* sout)
 }
 
 /*
- *	converts ascii bytes to utf16 by appending
+ *	Converts ascii bytes to utf16 by appending
  *	a zero byte after every 7-bit ascii chars;
- *	removes any non-ascii chars.
+ *	Removes any non-ascii chars.
  */
 void ascii_to_utf16 (stream_t* sin, stream_t* sout)
 {

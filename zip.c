@@ -330,12 +330,12 @@ int zip__seek_next_header (stream_t* s)
 }
 
 /*
- *	will read an parse the entire zip stream to look for one
+ *	Will read an parse the entire zip stream to look for one
  *	file to retrieve its headers and bytes.
- *	 - s: stream to read from
- *	 - fname: name of file to find
+ *	 - s: Stream to read from.
+ *	 - fname: Name of file to find.
  *	 - finfo: [out] file info
- *	 - fs: [out] output stream for file contents
+ *	 - fs: [out] Output stream for file contents.
  */
 int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, stream_t* fs)
 {
@@ -518,10 +518,10 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 }
 
 /*
- *	write a zip file with a single file inside
- *	 - s: [out] stream to write to
+ *	Write a zip file with a single file inside.
+ *	 - s: [out] Stream to write to.
  *	 - finfo: file information
- *	 - fs: input stream to read file contents
+ *	 - fs: Input stream to read file contents.
  */
 int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 {
