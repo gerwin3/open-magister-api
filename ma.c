@@ -305,11 +305,9 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 {
 	/* init */
 	int ret = 0;
-
-	CURL* curl = curl_easy_init();
 	char url[MAX_PATH];
-
-	stream_t rawresp = s_create ();
+	stream_t encreq = s_create ();
+	stream_t encresp = s_create ();
 
 	memset (url, 0, MAX_PATH);
 
@@ -320,40 +318,40 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 			 m->url_v,
 			 service);
 
-	/* setup curl to execute our request correctly,
-	 * using SSL and HTTP POST data */
-	curl_easy_setopt (curl, CURLOPT_URL, url);
-	curl_easy_setopt (curl, CURLOPT_URL, url);
-	curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0);
-	curl_easy_setopt (curl, CURLOPT_SSL_VERIFYHOST, 0);
-
-	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, ma__receive_callback);
-	curl_easy_setopt (curl, CURLOPT_WRITEDATA, &rawresp);
-
-	/*
-	 *	TODO: Request data, in!
-	 *		  Needs to be
-	 *			- XML encoded (oh... BTW... UTF-16)
-	 *			- ZIPPED
-	 *			- ZipCrypt encrypted
-	 *			- in hexdecimal bytes
-	 *			- wrapped by SOAP
-	 */
-
-	/* send request! */
-	if (curl_easy_perform (curl) == CURLE_OK)
+	/* Encode request data for Schoolmasters servers */
+	if (ma__encode_request (req, &encreq) == MA_OK)
 	{
-		/* decode the acquired data to readable format
-		 * and then write it */
-		ret = ( (ma__decode_request (&rawresp, resp) == MA_OK)
-				? MA_OK : MA_EMALFORMED);
+		/* setup curl to execute our request correctly,
+		 * using SSL and HTTP POST data */
+		curl_easy_setopt (m->curl, CURLOPT_URL, url);
+		curl_easy_setopt (m->curl, CURLOPT_SSL_VERIFYPEER, 0);
+		curl_easy_setopt (m->curl, CURLOPT_SSL_VERIFYHOST, 0);
+
+		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDS, (uint8_t*) s_glance (&encreq) );
+		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDSIZE, req->len);
+
+		curl_easy_setopt (m->curl, CURLOPT_WRITEFUNCTION, ma__receive_callback);
+		curl_easy_setopt (m->curl, CURLOPT_WRITEDATA, &encresp);
+
+		/* send request! */
+		if (curl_easy_perform (m->curl) == CURLE_OK)
+		{
+			/* decode the acquired data to readable format
+			 * and then write it */
+			ret = ( (ma__decode_request (&encresp, resp) == MA_OK)
+					? MA_OK : MA_EMALFORMED);
+		}
+		else {
+			ret = MA_ECONNECTION;
+		}
 	}
 	else {
-		ret = MA_ECONNECTION;
+		ret = MA_EINVAL;
 	}
 
 	/* cleanup */
-	s_free (&rawresp);
+	s_free (&encreq);
+	s_free (&encresp);
 
 	return ret;
 }
@@ -369,36 +367,46 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 	/* init */
 	int ret = 0;
 	int i = 0;
-
-	CURL* curl = curl_easy_init();
 	char url[MAX_URL];
 	char hdr_httploc[MAX_HDR];
-
 	llist_t lhdrs = ll_create ();
 
 	memset (url, 0, MAX_URL);
 	memset (hdr_httploc, 0, MAX_HDR);
 
-	/* format url correctly */
+	strcpy (hdr_httploc, "Location");
+
 	sprintf (url, "https://%s/", name);
 
-	/* prepare a list with the Location header-var
-	 * added to pass on to ma__header_callback */
-	strcpy (hdr_httploc, "Location");
+	/* list with only Location header pushed */
 	ll_push (&lhdrs, hdr_httploc);
+
+	/* Initialize CURL, the same session is used the whole
+	 * time so cookies etc are persisted. */
+	m->curl = curl_easy_init ();
 
 	/* setup curl to execute our request correctly,
 	 * using SSL and HTTP GET */
-	curl_easy_setopt (curl, CURLOPT_URL, url);
-	curl_easy_setopt (curl, CURLOPT_HTTPGET, 1);
-	curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0);
-	curl_easy_setopt (curl, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_easy_setopt (m->curl, CURLOPT_URL, url);
+	curl_easy_setopt (m->curl, CURLOPT_SSL_VERIFYPEER, 0);
+	curl_easy_setopt (m->curl, CURLOPT_SSL_VERIFYHOST, 0);
 
-	curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, ma__header_callback);
-	curl_easy_setopt (curl, CURLOPT_WRITEHEADER, &lhdrs);
+	/*
+	 *	Some of the cookies that will be stored:
+	 *	 - LoaderMode
+	 *	 - M5DB / M5DBSoort / M5VDir
+	 *	 - SchoolMaster.ID
+	 *	 - .ASPXAUTH
+	 */
+	curl_easy_setopt (m->curl, CURLOPT_COOKIEFILE, "");
+
+	/* Runs through the header lists and replaces the
+	 * variable names with their respective values */
+	curl_easy_setopt (m->curl, CURLOPT_HEADERFUNCTION, ma__header_callback);
+	curl_easy_setopt (m->curl, CURLOPT_WRITEHEADER, &lhdrs);
 
 	/* execute request! */
-	if (curl_easy_perform (curl) == CURLE_OK)
+	if (curl_easy_perform (m->curl) == CURLE_OK)
 	{
 		/* if the Location header has been found, we
 		 * consider this request a success */
@@ -411,8 +419,6 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 
 			memset (m->url_base, 0, MAX_URL);
 			memset (m->url_v, 0, MAX_URL);
-
-			/* copy over base url */
 			strcpy (m->url_base, name);
 
 			/* read the version string */

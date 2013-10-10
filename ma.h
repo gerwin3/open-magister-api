@@ -37,6 +37,8 @@
 
 struct ma_medius
 {
+	CURL* curl;
+
 	char url_base[MAX_URL];
 	char url_v[MAX_URL];
 };
