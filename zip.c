@@ -525,6 +525,10 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
  */
 int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 {
+	/* Will we be using a data descriptor? */
+	int ddesc =
+		(finfo->flags & ZIP_FLAG_DATA_DESC);
+
 	/* construct and write the local file header */
 	struct zip_hdr_local_file hdr_file = {
 		zip__hdr_sign (ZIP_HDR_LOCAL_FILE),
@@ -533,9 +537,9 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 		finfo->comp_method,
 		finfo->mod_time,
 		finfo->mod_date,
-		finfo->crc32,		/* TODO: Set to zero? */
-		finfo->comp_size,	/* ~ */
-		finfo->uncomp_size,	/* ~ */
+		(ddesc ? 0 : finfo->crc32),
+		(ddesc ? 0 : finfo->comp_size),
+		(ddesc ? 0 : finfo->uncomp_size),
 		finfo->fname_len,
 		0,
 		finfo->fname,
@@ -553,8 +557,7 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 	/* compensate for glancing on the fs stream */
 	s_seekg (fs, finfo->comp_size);
 
-	/* maybe we need to use a data descriptor? */
-	if (finfo->flags & ZIP_FLAG_DATA_DESC)
+	if (ddesc)
 	{
 		struct zip_hdr_data_desc hdr_ddesc = {
 			zip__hdr_sign (ZIP_HDR_DATA_DESC),
@@ -562,12 +565,6 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 			finfo->comp_size,
 			finfo->uncomp_size
 		};
-
-		/* these ought to be zero when they are
-		 * already in the data descriptor */
-		hdr_file.crc32 = 0;
-		hdr_file.comp_size = 0;
-		hdr_file.uncomp_size = 0;
 
 		if (zip__write_hdr (s, (zip_hdr_p) &hdr_ddesc) != ZIP_OK) {
 			return ZIP_EINVAL;
