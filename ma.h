@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <curl/curl.h>
+
 #include "stream.h"
 
 #define MAX_URL			512
@@ -47,5 +49,6 @@ int ma_medius_init (struct ma_medius* m, const char* name);
 void ma_medius_delete (struct ma_medius* m);
 
 int ma__decode_request (stream_t* sin, stream_t* sout); /* TODO: TEMP: DELETE */
+int ma_request_init_data (struct ma_medius *m); /* TODO: TEMP: DELETE */
 
 #endif

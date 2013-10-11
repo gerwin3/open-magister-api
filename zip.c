@@ -533,9 +533,9 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 		finfo->comp_method,
 		finfo->mod_time,
 		finfo->mod_date,
-		finfo->crc32,
-		finfo->comp_size,
-		finfo->uncomp_size,
+		finfo->crc32,		/* TODO: Set to zero? */
+		finfo->comp_size,	/* ~ */
+		finfo->uncomp_size,	/* ~ */
 		finfo->fname_len,
 		0,
 		finfo->fname,
@@ -550,8 +550,8 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 	 * already - to the output stream */
 	s_write (s, s_glance (fs), finfo->comp_size);
 
-	/* compensate for glancing on the in stream */
-	s_seekg (s, finfo->comp_size);
+	/* compensate for glancing on the fs stream */
+	s_seekg (fs, finfo->comp_size);
 
 	/* maybe we need to use a data descriptor? */
 	if (finfo->flags & ZIP_FLAG_DATA_DESC)

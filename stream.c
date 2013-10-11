@@ -126,13 +126,11 @@ int s_read (stream_t* s, uint8_t* b, int len)
 		/* only write if we have a valid
 		 * output buffer */
 		if (b != NULL) {
-			b[i] = s->buf[i + s->g];
+			b[i] = s->buf[s->g];
 		}
-	}
 
-	/* i is the number of bytes actually (!)
-	 * read; can be less */
-	s->g += i;
+		s->g++; /* move get ptr */
+	}
 
 	return i;
 }
@@ -156,19 +154,17 @@ void s_write (stream_t* s, uint8_t* b, int len)
 	for (i = 0; i < len; i++)
 	{
 		if (b != NULL) {
-			s->buf[i + s->p] = b[i];
+			s->buf[s->p] = b[i];
 		}
-	}
 
-	/* only add up the actually written bytes
-	 * (can't be less than len yet though) */
-	s->p += i;
+		s->p++; /* move put ptr */
+	}
 }
 
 int s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen)
 {
 	int i = 0;
-	for (i = 0; i < ( ( (maxlen > 0) ? maxlen : INT_MAX) && !s_eof (s)); i++)
+	for (i = 0; (i < ( (maxlen > 0) ? maxlen : INT_MAX) && !s_eof (s)); i++)
 	{
 		/* make sure we stop reading before
 		 * reaching the delim */
@@ -178,13 +174,11 @@ int s_read_until (stream_t* s, char delim, uint8_t* b, int maxlen)
 
 		if (b != NULL) {
 			/* only write to valid buf */
-			b[i] = s->buf[i + s->g];
+			b[i] = s->buf[s->g];
 		}
-	}
 
-	/* add up and return n of bytes actually
-	 * read ... */
-	s->g += i;
+		s->g++; /* move get ptr */
+	}
 
 	return i;
 }

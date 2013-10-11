@@ -81,21 +81,31 @@ int easy_fwrite (char* path, stream_t* s)
 
 int main (int argc, char* argv[])
 {
-	int ret;
-	stream_t s1 = s_create ();
-	stream_t s2 = s_create ();
-	stream_t s3 = s_create ();
+	struct ma_medius m;
 
-	s_write (&s1, (uint8_t*) "To beer or not to beer. Beer.",
-					 strlen ("To beer or not to beer. Beer."));
-
-	if (zip_encrypt (&s1, &s2, "SeCrEt!", 1337) != ZIP_CRYPT_OK) {
+	if (ma_medius_init (&m, "sga.swp.nl") != MA_OK) {
 		return -1;
 	}
 
-	ret = zip_decrypt (&s2, &s3, "SeCrEt!", 1337);
+	ma_request_init_data (&m);
 
-	ret = (ret == 0);
+	return 0;
+
+// 	int ret;
+// 	stream_t s1 = s_create ();
+// 	stream_t s2 = s_create ();
+// 	stream_t s3 = s_create ();
+// 
+// 	s_write (&s1, (uint8_t*) "To beer or not to beer. Beer.",
+// 					 strlen ("To beer or not to beer. Beer."));
+// 
+// 	if (zip_encrypt (&s1, &s2, "SeCrEt!", 1337) != ZIP_CRYPT_OK) {
+// 		return -1;
+// 	}
+// 
+// 	ret = zip_decrypt (&s2, &s3, "SeCrEt!", 1337);
+// 
+// 	ret = (ret == 0);
 
 // 	
 // 	char refpath[MAX_PATH] = "J:\\Programming\\staging_workspace\\magister\\comm\\all-resp\\resp";

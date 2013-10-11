@@ -1,6 +1,5 @@
 #include "ma.h"
 
-#include <curl/curl.h>
 #include <zlib.h>
 
 #include "list.h"
@@ -42,19 +41,19 @@ int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 	llist_t* lhdrs = (llist_t*) userp;
 	struct llist_node* nhdr = NULL;
 
-	/* we're trying to find out if this is one of the
-	 * headers we're looking for */
+	/* We're trying to find out if this is one of the
+	 * headers we're looking for. */
 	for (nhdr = lhdrs->head;
-		 nhdr->next != NULL;
+		 nhdr != NULL;
 		 nhdr = nhdr->next)
 	{
 		char* shdr = (char*) nhdr->v;
 
-		if (memcmp (shdr, buf, strlen (shdr)))
+		if (memcmp (shdr, buf, strlen (shdr)) == 0)
 		{
-			/* we've found a header we need, reset the
+			/* We've found a header we need, reset the
 			 * input buffer and copy over this line to
-			 * it; now it's a output buf */
+			 * it; Now it's a output buf. */
 			memset (shdr, 0, MAX_HDR);
 			memcpy (shdr, buf, max ( (size * len), MAX_HDR));
 		}
@@ -74,6 +73,9 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 	int r = 0;
 	stream_t s1, s2, s3;
 
+	uint8_t* z_buf_out = NULL;
+	z_stream z_strm;
+
 	s1 = s_create ();
 	s2 = s_create ();
 	s3 = s_create ();
@@ -89,12 +91,11 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 	 *	 -> compress them
 	 */
 
-	uint8_t* z_buf_out =
-		(uint8_t*) malloc (sin->len);
+	z_buf_out =
+		(uint8_t*) malloc (s1.len);
 
 	/* initialize a 'z_stream' that zlib uses to
 	 * inflate/deflate this data */
-	z_stream z_strm;
 	z_strm.zalloc = Z_NULL;
 	z_strm.zfree = Z_NULL;
 	z_strm.opaque = Z_NULL;
@@ -110,7 +111,7 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 				  Z_DEFLATED, -13, 8,
 				  Z_DEFAULT_STRATEGY);
 
-	if (deflate (&z_strm, Z_NO_FLUSH) == Z_OK)
+	if (deflate (&z_strm, Z_FINISH) == Z_STREAM_END)
 	{
 		stream_t stmp =
 			s_create_from_buf (z_buf_out, z_strm.total_out);
@@ -136,9 +137,9 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 
 			/*
 			 *	L3: Zip container
-			 *	 -> extract the 'content' file from the zip
+			 *	 -> write the 'content' file to the zip
 			 */
-			if (zip_file_write (&s2, &zfile, &s3) == ZIP_OK)
+			if (zip_file_write (&s3, &zfile, &s2) == ZIP_OK)
 			{
 				/*
 				 *	L1: SOAP layer
@@ -167,6 +168,8 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 		else {
 			r = MA_EINVAL;
 		}
+
+		deflateEnd (&z_strm);
 
 		s_free (&stmp);
 	}
@@ -253,8 +256,9 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 				 *	L6: UTF-16 encoded
 				 *	 -> we want regular ASCII for parsing
 				 */
-				stmp = s_create_from_buf (z_buf_out,
-										  zfile.uncomp_size);
+				stream_t stmp =
+					s_create_from_buf (z_buf_out,
+									   zfile.uncomp_size);
 
 				utf16_to_ascii (&stmp, sout);
 	
@@ -266,6 +270,8 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 
 				/* seems like we made it :) */
 				r = MA_OK;
+
+				s_free (&stmp);
 			}
 			else {
 				r = MA_EMALFORMED;
@@ -285,7 +291,6 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 
 	/* deinit */
 
-	s_free (&stmp);
 	s_free (&s1);
 	s_free (&s2);
 	s_free (&s3);
@@ -321,25 +326,30 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 	/* Encode request data for Schoolmasters servers */
 	if (ma__encode_request (req, &encreq) == MA_OK)
 	{
-		/* setup curl to execute our request correctly,
-		 * using SSL and HTTP POST data */
 		curl_easy_setopt (m->curl, CURLOPT_URL, url);
 		curl_easy_setopt (m->curl, CURLOPT_SSL_VERIFYPEER, 0);
 		curl_easy_setopt (m->curl, CURLOPT_SSL_VERIFYHOST, 0);
 
-		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDS, (uint8_t*) s_glance (&encreq) );
-		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDSIZE, req->len);
+		/* Insert POST request data */
+		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDS,
+								   (uint8_t*) s_glance (&encreq) );
 
-		curl_easy_setopt (m->curl, CURLOPT_WRITEFUNCTION, ma__receive_callback);
-		curl_easy_setopt (m->curl, CURLOPT_WRITEDATA, &encresp);
+		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDSIZE,
+								   req->len);
 
-		/* send request! */
+		/* Receive response body */
+		curl_easy_setopt (m->curl, CURLOPT_WRITEFUNCTION,
+								   ma__receive_callback);
+
+		curl_easy_setopt (m->curl, CURLOPT_WRITEDATA,
+								   &encresp);
+
+		/* Send request! */
 		if (curl_easy_perform (m->curl) == CURLE_OK)
 		{
-			/* decode the acquired data to readable format
-			 * and then write it */
 			ret = ( (ma__decode_request (&encresp, resp) == MA_OK)
-					? MA_OK : MA_EMALFORMED);
+					? MA_OK
+					: MA_EMALFORMED);
 		}
 		else {
 			ret = MA_ECONNECTION;
@@ -349,7 +359,14 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 		ret = MA_EINVAL;
 	}
 
-	/* cleanup */
+	/* Cleanup */
+
+	curl_easy_setopt (m->curl, CURLOPT_URL, NULL);
+	curl_easy_setopt (m->curl, CURLOPT_POSTFIELDS, NULL);
+	curl_easy_setopt (m->curl, CURLOPT_POSTFIELDSIZE, NULL);
+	curl_easy_setopt (m->curl, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt (m->curl, CURLOPT_WRITEDATA, NULL);
+
 	s_free (&encreq);
 	s_free (&encresp);
 
@@ -381,8 +398,12 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 	/* list with only Location header pushed */
 	ll_push (&lhdrs, hdr_httploc);
 
-	/* Initialize CURL, the same session is used the whole
-	 * time so cookies etc are persisted. */
+	/*
+	 *	Initialize curl, the CURL session ptr is
+	 *	stored with the medius, cookies etc are
+	 *	persisted across requests.
+	 */
+
 	m->curl = curl_easy_init ();
 
 	/* setup curl to execute our request correctly,
@@ -402,8 +423,12 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 
 	/* Runs through the header lists and replaces the
 	 * variable names with their respective values */
-	curl_easy_setopt (m->curl, CURLOPT_HEADERFUNCTION, ma__header_callback);
-	curl_easy_setopt (m->curl, CURLOPT_WRITEHEADER, &lhdrs);
+
+	curl_easy_setopt (m->curl, CURLOPT_HEADERFUNCTION,
+							   ma__header_callback);
+
+	curl_easy_setopt (m->curl, CURLOPT_WRITEHEADER,
+							   (void*) &lhdrs);
 
 	/* execute request! */
 	if (curl_easy_perform (m->curl) == CURLE_OK)
@@ -412,18 +437,20 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 		 * consider this request a success */
 		if (strlen (hdr_httploc) > strlen ("Location"))
 		{
-			/* make this into a stream so we can read
-			 * it more easily later */
 			stream_t shdr_httploc =
-				s_create_from_buf ( (uint8_t*) hdr_httploc, strlen (hdr_httploc));
+				s_create_from_buf ( (uint8_t*) hdr_httploc,
+									strlen (hdr_httploc) );
 
 			memset (m->url_base, 0, MAX_URL);
 			memset (m->url_v, 0, MAX_URL);
 			strcpy (m->url_base, name);
 
 			/* read the version string */
-			s_seekg (&shdr_httploc, + (strlen ("Location: /")));
-			s_read_until (&shdr_httploc, '/', (uint8_t*) m->url_v, MAX_URL);
+			s_seekg (&shdr_httploc, + (strlen ("Location: /") ) );
+
+			s_read_until (&shdr_httploc, '/',
+						  (uint8_t*) m->url_v,
+						  MAX_URL);
 
 			s_free (&shdr_httploc);
 		}
@@ -435,7 +462,12 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 		ret = MA_ECONNECTION;
 	}
 
-	/* cleanup */
+	/* Cleanup */
+
+	curl_easy_setopt (m->curl, CURLOPT_URL, NULL);
+	curl_easy_setopt (m->curl, CURLOPT_HEADERFUNCTION, NULL);
+	curl_easy_setopt (m->curl, CURLOPT_WRITEHEADER, NULL);
+
 	ll_free (&lhdrs);
 
 	return ret;
@@ -444,4 +476,35 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 void ma_medius_delete (struct ma_medius* m)
 {
 	/* TODO: Remove, maybe, someday */
+}
+
+
+/* 
+ *	TODO ->
+ *		Would this work???
+ */
+int ma_request_init_data (struct ma_medius *m)
+{
+	static const char req0[] =
+		"<?xml version=\"1.0\" encoding=\"utf-16\"?>\
+		<GetStartupData xmlns=\"http://tempuri.org/\">\
+		<clientDate>%s</clientDate>\
+		</GetStartupData>";
+
+	int r = 0;
+	char req[sizeof (req0) + 64];
+	stream_t sreq = s_create ();
+	stream_t sresp = s_create ();
+
+	memset (req, 0, sizeof (req) );
+	sprintf (req, req0, "<TODO: Insert GMT Time>");
+
+	s_write (&sreq, (uint8_t*) req, strlen (req) );
+
+	r = ma__do_request (m, MA_SVC_LOGIN, &sreq, &sresp);
+
+	s_free (&sreq);
+	s_free (&sresp);
+
+	return r;
 }
