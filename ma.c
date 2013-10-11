@@ -473,22 +473,16 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 	return ret;
 }
 
-void ma_medius_delete (struct ma_medius* m)
-{
-	/* TODO: Remove, maybe, someday */
-}
-
-
 /* 
  *	TODO ->
- *		Would this work???
+ *		Would this work? Well, no. Not yet.
  */
 int ma_request_init_data (struct ma_medius *m)
 {
 	static const char req0[] =
 		"<?xml version=\"1.0\" encoding=\"utf-16\"?>\
 		<GetStartupData xmlns=\"http://tempuri.org/\">\
-		<clientDate>%s</clientDate>\
+		<clientDate>%4d-%2d-%2dT%2d:%2d:%2d.%d+02:00</clientDate>\
 		</GetStartupData>";
 
 	int r = 0;
@@ -496,8 +490,18 @@ int ma_request_init_data (struct ma_medius *m)
 	stream_t sreq = s_create ();
 	stream_t sresp = s_create ();
 
+	time_t ctime = time (NULL);
+	struct tm* ptime = gmtime (&ctime);
+
 	memset (req, 0, sizeof (req) );
-	sprintf (req, req0, "<TODO: Insert GMT Time>");
+	sprintf (req, req0,
+			 ptime->tm_year + 1900,
+			 ptime->tm_mon + 1,
+			 ptime->tm_mday,
+			 ptime->tm_hour,
+			 ptime->tm_min,
+			 ptime->tm_sec,
+			 0);
 
 	s_write (&sreq, (uint8_t*) req, strlen (req) );
 

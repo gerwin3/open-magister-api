@@ -90,46 +90,4 @@ int main (int argc, char* argv[])
 	ma_request_init_data (&m);
 
 	return 0;
-
-// 	int ret;
-// 	stream_t s1 = s_create ();
-// 	stream_t s2 = s_create ();
-// 	stream_t s3 = s_create ();
-// 
-// 	s_write (&s1, (uint8_t*) "To beer or not to beer. Beer.",
-// 					 strlen ("To beer or not to beer. Beer."));
-// 
-// 	if (zip_encrypt (&s1, &s2, "SeCrEt!", 1337) != ZIP_CRYPT_OK) {
-// 		return -1;
-// 	}
-// 
-// 	ret = zip_decrypt (&s2, &s3, "SeCrEt!", 1337);
-// 
-// 	ret = (ret == 0);
-
-// 	
-// 	char refpath[MAX_PATH] = "J:\\Programming\\staging_workspace\\magister\\comm\\all-resp\\resp";
-// 
-// 	int i = 0;
-// 	for (i = 1; i <= 17; i++)
-// 	{
-// 		char path[MAX_PATH];
-// 		char suffix[] = "\0\0";
-// 
-// 		stream_t sencoded = s_create ();
-// 		stream_t sdecoded = s_create ();
-// 
-// 		/* construct path */
-// 		strcpy (path, refpath);
-// 		itoa (i, suffix, 10);
-// 		strcat (path, suffix);
-// 
-// 		/* read & decode */
-// 		easy_fread (path, &sencoded);
-// 		ma__decode_request (&sencoded, &sdecoded);
-// 		
-// 		/* write to .out path */
-// 		strcat (path, ".out");
-// 		easy_fwrite (path, &sdecoded);	
-// 	}
 }
