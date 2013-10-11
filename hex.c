@@ -46,8 +46,8 @@ void hex2bin (stream_t* sin, stream_t* sout)
 	while (!s_eof(sin))
 	{
 		char hex[] = { (char) s_read_byte(sin),
-					   (char) s_read_byte(sin),
-					   '\0' };
+			       (char) s_read_byte(sin),
+			       '\0' };
 		int byte;
 		
 		sscanf (hex, "%2hhX", &byte);
