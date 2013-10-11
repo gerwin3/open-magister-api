@@ -10,14 +10,14 @@
 
 #include "zip_crypt.h"
 
-/*	MODULE		  |	STATUS		  |	LIB			  |	
+/*	MODULE		| STATUS	| LIB
  *	-----------------------------------------------
- *	hex <-> bin		Done			hex.h / My
- *	zip headers		Done			zip.h / My
- *	zip crypto		Done			zypt.h / Xceed
- *	SOAP			Done			? / My
- *	HTTPS			Done			curl (.h)
- *	DEFLATE			Done			zlib (.h)
+ *	hex <-> bin	  Done		  hex.h / My
+ *	zip headers	  Done		  zip.h / My
+ *	zip crypto	  Done		  zypt.h / Xceed
+ *	SOAP		  Done		  ? / My
+ *	HTTPS		  Done		  curl (.h)
+ *	DEFLATE		  Done		  zlib (.h)
  *
  *	* = pretty much sure this all works!
  */

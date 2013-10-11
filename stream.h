@@ -4,20 +4,20 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define S_INIT_LEN		256
+#define S_INIT_LEN	256
 
 #define S_SEEK_BEGIN	INT_MIN
-#define S_SEEK_END		INT_MAX
+#define S_SEEK_END	INT_MAX
 
 typedef struct
 {
-	uint8_t*	buf;	/* gets resized when more space is needed, size 
-						 * always equals .len */
-	int			buf_own;
-	int			len_avail;
-	int			len;
-	int			g;
-	int			p;
+	uint8_t*	buf;		/* gets resized when more space is needed, size 
+					* always equals .len */
+	int		buf_own;
+	int		len_avail;
+	int		len;
+	int		g;
+	int		p;
 }
 stream_t;
 

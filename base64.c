@@ -34,8 +34,8 @@ void base64_encode(stream_t* sin, stream_t* sout)
 	while ( ( sin->len - s_tellg (sin)) >= 3)
 	{
 		uint8_t in[] = { s_read_byte (sin),
-						 s_read_byte (sin),
-						 s_read_byte (sin) };
+				 s_read_byte (sin),
+				 s_read_byte (sin) };
 
 		/* split the 3 bytes into 4 6-bit pieces and
 		 * use the lookup table to find a matching
@@ -68,7 +68,7 @@ void base64_encode(stream_t* sin, stream_t* sout)
 		 * into one 18-bit block and read 3 pieces */
 
 		uint8_t in[] = { s_read_byte (sin),
-						 s_read_byte (sin) };
+				 s_read_byte (sin) };
 
 		s_write_byte (sout, base64__enc[(in[0] & 0xfc) >> 2]);
 		s_write_byte (sout, base64__enc[( (in[0] & 0x03) << 4) | ( (in[1] & 0xf0) >> 4)]);
@@ -85,9 +85,9 @@ void base64_decode(stream_t* sin, stream_t* sout)
 	{
 		int odd = 0;
 		char in[] = { s_read_byte (sin),
-					  s_read_byte (sin),
-					  s_read_byte (sin),
-					  s_read_byte (sin) };
+			      s_read_byte (sin),
+			      s_read_byte (sin),
+			      s_read_byte (sin) };
 
 		/* determine the number of odd (left over)
 		 * bytes in the original data */
@@ -105,11 +105,11 @@ void base64_decode(stream_t* sin, stream_t* sout)
 				/* reacquire the 3 bytes from 4 given 6-bit
 				 * pieces; write to out */
 				s_write_byte (sout, (uint8_t) ( (base64__dec[in[0]] << 2) & 0xff |
-												(base64__dec[in[1]] >> 4) & 0xff ) );
+								(base64__dec[in[1]] >> 4) & 0xff ) );
 				s_write_byte (sout, (uint8_t) ( (base64__dec[in[1]] << 4) & 0xff |
-												(base64__dec[in[2]] >> 2) & 0xff ) );
+								(base64__dec[in[2]] >> 2) & 0xff ) );
 				s_write_byte (sout, (uint8_t) ( (base64__dec[in[2]] << 6) & 0xff |
-												 base64__dec[in[3]] ) );		
+								base64__dec[in[3]] ) );		
 			}
 			break;
 			case 1:
@@ -117,7 +117,7 @@ void base64_decode(stream_t* sin, stream_t* sout)
 				/* ... same as above; take into account the
 				 * number of odd bytes */
 				s_write_byte (sout, (uint8_t) ( (base64__dec[in[0]] << 2) & 0xff |
-												(base64__dec[in[1]] >> 4) & 0xff ) );
+								(base64__dec[in[1]] >> 4) & 0xff ) );
 			}
 			break;
 			case 2:
@@ -125,9 +125,9 @@ void base64_decode(stream_t* sin, stream_t* sout)
 				/* ... same as above; take into account the
 				 * number of odd bytes */
 				s_write_byte (sout, (uint8_t) ( (base64__dec[in[0]] << 2) & 0xff |
-												(base64__dec[in[1]] >> 4) & 0xff ) );
+								(base64__dec[in[1]] >> 4) & 0xff ) );
 				s_write_byte (sout, (uint8_t) ( (base64__dec[in[1]] << 4) & 0xff |
-												(base64__dec[in[2]] >> 2) & 0xff ) );
+								(base64__dec[in[2]] >> 2) & 0xff ) );
 			}
 			break;
 		}

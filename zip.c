@@ -359,9 +359,10 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 
 				/* decide if this is a match by comparing the
 				 * target fname with the current file name */
-				match = (memcmp (hdr_cdfile.fname,
-								 fname,
-								 imin(hdr_cdfile.fname_len, strlen (fname))) == 0) ? 1 : 0;
+				match = (memcmp (hdr_cdfile.fname, fname,
+						 imin (hdr_cdfile.fname_len, strlen (fname))) == 0)
+							? 1
+							: 0;
 
 				if (match)
 				{
@@ -438,9 +439,10 @@ int zip_file_read(stream_t* s, const char* fname, struct zip_file_info* finfo, s
 
 				/* decide if this is a match by comparing the
 				 * target fname with the current file name */
-				match = (memcmp (hdr_lfile.fname,
-								 fname,
-								 imin (hdr_lfile.fname_len, strlen (fname))) == 0) ? 1 : 0;
+				match = (memcmp (hdr_lfile.fname, fname,
+						 imin (hdr_lfile.fname_len, strlen (fname))) == 0)
+							? 1
+							: 0;
 
 				if (match)
 				{
@@ -577,11 +579,11 @@ int zip_file_write (stream_t* s, struct zip_file_info* finfo, stream_t* fs)
 			zip__hdr_sign (ZIP_HDR_CENDIR_END),
 			0,
 			0,
-			1,				/* number of cendirs: 1 */
+			1,		/* number of cendirs: 1 */
 			0,
 			s_tellp (s),	/* the offset to the cendir is the start
-							 * of the cd_end hdr, because we don't
-							 * have any entries in it. */
+					 * of the cd_end hdr, because we don't
+					 * have any entries in it. */
 			0,
 			NULL
 		};

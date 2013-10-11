@@ -20,8 +20,8 @@
 int ma__receive_callback (void* buf, size_t size, size_t len, void* userp)
 {
 	s_write ( (stream_t*) userp,
-			  (uint8_t*) buf,
-			  (size * len));
+		  (uint8_t*) buf,
+		  (size * len));
 
 	return len;
 }
@@ -44,8 +44,8 @@ int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 	/* We're trying to find out if this is one of the
 	 * headers we're looking for. */
 	for (nhdr = lhdrs->head;
-		 nhdr != NULL;
-		 nhdr = nhdr->next)
+	     nhdr != NULL;
+	     nhdr = nhdr->next)
 	{
 		char* shdr = (char*) nhdr->v;
 
@@ -107,9 +107,9 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 	/* use zlib to deflate the data, the second
 	 * argument, -13, makes this a raw deflate */
 	deflateInit2 (&z_strm,
-				  Z_DEFAULT_COMPRESSION,
-				  Z_DEFLATED, -13, 8,
-				  Z_DEFAULT_STRATEGY);
+		      Z_DEFAULT_COMPRESSION,
+		      Z_DEFLATED, -13, 8,
+		      Z_DEFAULT_STRATEGY);
 
 	if (deflate (&z_strm, Z_FINISH) == Z_STREAM_END)
 	{
@@ -123,16 +123,16 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 		if (zip_encrypt (&stmp, &s2, MA_ZIP_PASSWORD, MA_ZIP_MODTIME) == ZIP_CRYPT_OK)
 		{
 			struct zip_file_info zfile = {
-				MA_ZIP_NAME,			/* => content */
+				MA_ZIP_NAME,		/* => content */
 				strlen (MA_ZIP_NAME),
 				ZIP_FLAG_ENCRYPTED |	/* we have encrypted the data! */
-				ZIP_FLAG_DATA_DESC,		/* using a data descriptor */
+				ZIP_FLAG_DATA_DESC,	/* using a data descriptor */
 				ZIP_METHOD_DEFLATED,
-				z_strm.total_out,		/* size of compressed data */
-				s1.len,					/* and before compression */
-				MA_ZIP_MODTIME,			/* is used as seed for decryption */
+				z_strm.total_out,	/* size of compressed data */
+				s1.len,			/* and before compression */
+				MA_ZIP_MODTIME,		/* is used as seed for decryption */
 				0,
-				0						/* TODO: This might cause problems! */
+				0			/* TODO: This might cause problems! */
 			};
 
 			/*
@@ -145,7 +145,8 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 				 *	L1: SOAP layer
 				 *	 -> write soap prefix/header
 				 */
-				s_write (sout, (uint8_t*) MA_SOAP_PREFIX, strlen (MA_SOAP_PREFIX));
+				s_write (sout, (uint8_t*) MA_SOAP_PREFIX,
+					       strlen (MA_SOAP_PREFIX));
 
 				/*
 				 *	L2: hexdec layer
@@ -157,7 +158,8 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 				 *	L1: SOAP layer
 				 *	 -> write soap postfix/footer
 				 */
-				s_write (sout, (uint8_t*) MA_SOAP_POSTFIX, strlen (MA_SOAP_POSTFIX));
+				s_write (sout, (uint8_t*) MA_SOAP_POSTFIX,
+					       strlen (MA_SOAP_POSTFIX));
 
 				r = MA_OK;
 			}
@@ -258,7 +260,7 @@ int ma__decode_request (stream_t* sin, stream_t* sout)
 				 */
 				stream_t stmp =
 					s_create_from_buf (z_buf_out,
-									   zfile.uncomp_size);
+							   zfile.uncomp_size);
 
 				utf16_to_ascii (&stmp, sout);
 	
@@ -319,9 +321,9 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 	/* format url correctly, including service and
 	 * correct version */
 	sprintf (url, "https://%s/%s/WCFServices/%s",
-			 m->url_base,
-			 m->url_v,
-			 service);
+		 m->url_base,
+		 m->url_v,
+		 service);
 
 	/* Encode request data for Schoolmasters servers */
 	if (ma__encode_request (req, &encreq) == MA_OK)
@@ -332,17 +334,17 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 
 		/* Insert POST request data */
 		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDS,
-								   (uint8_t*) s_glance (&encreq) );
+				  (uint8_t*) s_glance (&encreq) );
 
 		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDSIZE,
-								   req->len);
+				  req->len);
 
 		/* Receive response body */
 		curl_easy_setopt (m->curl, CURLOPT_WRITEFUNCTION,
-								   ma__receive_callback);
+				  ma__receive_callback);
 
 		curl_easy_setopt (m->curl, CURLOPT_WRITEDATA,
-								   &encresp);
+				  &encresp);
 
 		/* Send request! */
 		if (curl_easy_perform (m->curl) == CURLE_OK)
@@ -425,10 +427,10 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 	 * variable names with their respective values */
 
 	curl_easy_setopt (m->curl, CURLOPT_HEADERFUNCTION,
-							   ma__header_callback);
+			  ma__header_callback);
 
 	curl_easy_setopt (m->curl, CURLOPT_WRITEHEADER,
-							   (void*) &lhdrs);
+			  (void*) &lhdrs);
 
 	/* execute request! */
 	if (curl_easy_perform (m->curl) == CURLE_OK)
@@ -439,7 +441,7 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 		{
 			stream_t shdr_httploc =
 				s_create_from_buf ( (uint8_t*) hdr_httploc,
-									strlen (hdr_httploc) );
+						    strlen (hdr_httploc) );
 
 			memset (m->url_base, 0, MAX_URL);
 			memset (m->url_v, 0, MAX_URL);
@@ -449,8 +451,8 @@ int ma_medius_init (struct ma_medius* m, const char* name)
 			s_seekg (&shdr_httploc, + (strlen ("Location: /") ) );
 
 			s_read_until (&shdr_httploc, '/',
-						  (uint8_t*) m->url_v,
-						  MAX_URL);
+				      (uint8_t*) m->url_v,
+				      MAX_URL);
 
 			s_free (&shdr_httploc);
 		}
@@ -495,13 +497,13 @@ int ma_request_init_data (struct ma_medius *m)
 
 	memset (req, 0, sizeof (req) );
 	sprintf (req, req0,
-			 ptime->tm_year + 1900,
-			 ptime->tm_mon + 1,
-			 ptime->tm_mday,
-			 ptime->tm_hour,
-			 ptime->tm_min,
-			 ptime->tm_sec,
-			 0);
+		 ptime->tm_year + 1900,
+		 ptime->tm_mon + 1,
+		 ptime->tm_mday,
+		 ptime->tm_hour,
+		 ptime->tm_min,
+		 ptime->tm_sec,
+		 0);
 
 	s_write (&sreq, (uint8_t*) req, strlen (req) );
 

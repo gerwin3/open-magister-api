@@ -25,15 +25,14 @@ uint8_t zip_crypt__special_byte (uint32_t keys[3])
 int zip_encrypt (stream_t* sin, stream_t* sout, const char* password, uint32_t seed)
 {
 	uint32_t keys[3] = { 305419896,
-						 591751049,
-						 878082192 };
+			     591751049,
+			     878082192 };
 
 	int i = 0;
 	uint32_t rnd = (clock () ^ (seed << 5));
 
 	/* develops the keys with the password */
-	for (i = 0; i < strlen (password); i++)
-	{
+	for (i = 0; i < strlen (password); i++) {
 		zip_crypt__develop_keys (keys, password[i]);
 	}
 
@@ -81,14 +80,13 @@ int zip_decrypt (stream_t* sin, stream_t* sout, const char* password, uint32_t s
 	int r = 0;
 
 	uint32_t keys[3] = { 305419896,
-						 591751049,
-						 878082192 };
+			     591751049,
+			     878082192 };
 
 	int i = 0;
 
 	/* develops the keys with the password */
-	for (i = 0; i < strlen (password); i++)
-	{
+	for (i = 0; i < strlen (password); i++) {
 		zip_crypt__develop_keys (keys, password[i]);
 	}
 
@@ -105,8 +103,8 @@ int zip_decrypt (stream_t* sin, stream_t* sout, const char* password, uint32_t s
 		if (i == ZIP_CRYPT_HDR_LEN - 1)
 		{
 			r = ((x == (seed >> 8) & 0xff)
-					? ZIP_CRYPT_OK
-					: ZIP_CRYPT_BAD_PASSWORD);
+				? ZIP_CRYPT_OK
+				: ZIP_CRYPT_BAD_PASSWORD);
 		}
 
 		/* we don't need to decrypt and store the header, so
