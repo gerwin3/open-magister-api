@@ -13,12 +13,13 @@
 /*	MODULE		  |	STATUS		  |	LIB			  |	
  *	-----------------------------------------------
  *	hex <-> bin		Done			hex.h / My
- *	zip headers		>Untested<Done	zip.h / My
+ *	zip headers		Done			zip.h / My
  *	zip crypto		Done			zypt.h / Xceed
- *	XML				Poss. Obsolete	?
  *	SOAP			Done			? / My
  *	HTTPS			Done			curl (.h)
- *	DEFLATE			Done (Unused)	zlib (.h)
+ *	DEFLATE			Done			zlib (.h)
+ *
+ *	* = pretty much sure this all works!
  */
 
 int easy_fread (char* path, stream_t* s)
@@ -88,6 +89,8 @@ int main (int argc, char* argv[])
 	}
 
 	ma_request_init_data (&m);
+
+	getchar ();
 
 	return 0;
 }

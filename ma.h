@@ -46,8 +46,6 @@ struct ma_medius
 };
 
 int ma_medius_init (struct ma_medius* m, const char* name);
-
-int ma__decode_request (stream_t* sin, stream_t* sout); /* TODO: TEMP: DELETE */
-int ma_request_init_data (struct ma_medius *m); /* TODO: TEMP: DELETE */
+int ma_request_init_data (struct ma_medius *m); /* TODO: TEMP: DELETE (or rename, probably internal) */
 
 #endif
