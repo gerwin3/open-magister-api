@@ -102,7 +102,7 @@ int zip_decrypt (stream_t* sin, stream_t* sout, const char* password, uint32_t s
 		 * word is correct... */
 		if (i == ZIP_CRYPT_HDR_LEN - 1)
 		{
-			r = ((x == (seed >> 8) & 0xff)
+			r = ( (x == ( (seed >> 8) & 0xff ) )
 				? ZIP_CRYPT_OK
 				: ZIP_CRYPT_BAD_PASSWORD);
 		}

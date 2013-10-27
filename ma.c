@@ -184,6 +184,8 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
 	s_free (&s1);
 	s_free (&s2);
 	s_free (&s3);
+
+	return r;
 }
 
 /*
@@ -192,12 +194,12 @@ int ma__encode_request (stream_t* sin, stream_t* sout)
  *	 - sin: input data
  *	 - sout: output data
  */
-int ma__decode_request (stream_t* sin, stream_t* sout)
+int ma__decode_response (stream_t* sin, stream_t* sout)
 {
 	/* init */
 
 	int r = 0;
-	stream_t s1, s2, s3, stmp;
+	stream_t s1, s2, s3;
 
 	struct zip_file_info zfile;
 
@@ -349,7 +351,7 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 		/* Send request! */
 		if (curl_easy_perform (m->curl) == CURLE_OK)
 		{
-			ret = ( (ma__decode_request (&encresp, resp) == MA_OK)
+			ret = ( (ma__decode_response (&encresp, resp) == MA_OK)
 					? MA_OK
 					: MA_EMALFORMED);
 		}
