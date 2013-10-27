@@ -41,6 +41,22 @@ int ma__header_callback (void* buf, size_t size, size_t len, void* userp)
 	llist_t* lhdrs = (llist_t*) userp;
 	struct llist_node* nhdr = NULL;
 
+	{
+		/* TODO DEBUG REMOV E*/
+		char* hdrstr = (char*) buf;
+
+		if (userp == NULL)
+		{
+			int i = 0;
+			/* DEBUG */
+			for (i = 0; i < (len*size); i++) {
+				putchar (hdrstr[i]);
+			}
+
+			return len;
+		}	
+	}
+
 	/* We're trying to find out if this is one of the
 	 * headers we're looking for. */
 	for (nhdr = lhdrs->head;
@@ -340,6 +356,17 @@ int ma__do_request (struct ma_medius* m, const char* service, stream_t* req, str
 
 		curl_easy_setopt (m->curl, CURLOPT_POSTFIELDSIZE,
 				  req->len);
+
+		/* TODO DEBUG REMOVE { */
+		{
+			curl_easy_setopt (m->curl, CURLOPT_HEADERFUNCTION,
+				ma__header_callback);
+
+			/* TRIGGERS DEBUG MODE */
+			curl_easy_setopt (m->curl, CURLOPT_WRITEHEADER,
+				NULL);
+		}
+		/* END */
 
 		/* Receive response body */
 		curl_easy_setopt (m->curl, CURLOPT_WRITEFUNCTION,
